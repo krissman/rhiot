@@ -17,23 +17,14 @@
 package com.github.camellabs.iot.gateway.app
 
 import io.rhiot.gateway.GatewayVerticle
-import io.rhiot.gateway.Gateway
+import io.rhiot.gateway.test.GatewayTest
 import io.rhiot.vertx.camel.GroovyCamelVerticle
 import org.apache.camel.component.mock.MockEndpoint
-import org.junit.BeforeClass
 import org.junit.Test
 
-import static io.rhiot.vertx.camel.CamelContextFactories.camelContext
-import static java.util.concurrent.TimeUnit.MINUTES
-import static java.util.concurrent.TimeUnit.SECONDS
+import static io.rhiot.steroids.camel.CamelBootInitializer.camelContext
 
-class CustomCamelVerticleTest {
-
-    @BeforeClass
-    static void beforeClass() {
-        new Gateway().start()
-        SECONDS.sleep(60) // Attempt to fix the unstable build
-    }
+class CustomCamelVerticleTest extends GatewayTest {
 
     // Tests
 
@@ -44,7 +35,7 @@ class CustomCamelVerticleTest {
         mockEndpoint.setMinimumExpectedMessageCount(1)
 
         // Then
-        MockEndpoint.assertIsSatisfied(1, MINUTES, mockEndpoint)
+        mockEndpoint.assertIsSatisfied()
     }
 
 }

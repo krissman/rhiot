@@ -14,4 +14,4 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-class=com.github.camellabs.component.tinkerforge.TinkerforgeComponent
+class=io.rhiot.component.tinkerforge.TinkerforgeComponent

@@ -6,10 +6,10 @@
     <parent>
         <groupId>io.rhiot</groupId>
         <artifactId>rhiot-bom</artifactId>
-        <version>0.1.2-SNAPSHOT</version>
+        <version>0.1.3-SNAPSHOT</version>
         <relativePath>../bom</relativePath>
     </parent>
-
+    <name>RHIOT :: Gateway :: App</name>
     <artifactId>rhiot-gateway-app</artifactId>
 
     <licenses>

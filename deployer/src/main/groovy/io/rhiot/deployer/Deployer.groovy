@@ -16,8 +16,18 @@
  */
 package io.rhiot.deployer
 
+import groovy.transform.PackageScope
+import io.rhiot.deployer.detector.Device
+import io.rhiot.deployer.detector.DeviceDetector
+import io.rhiot.deployer.detector.SimplePortScanningDeviceDetector
 import io.rhiot.deployer.maven.JcabiMavenArtifactResolver
-import com.github.camellabs.iot.utils.ssh.client.SshClient
+import io.rhiot.utils.ssh.client.SshClient
+
+import java.util.concurrent.Future
+
+import static io.rhiot.utils.Mavens.MavenCoordinates.parseMavenCoordinates
+import static io.rhiot.utils.Mavens.artifactVersionFromDependenciesProperties
+import static java.util.Optional.empty
 
 class Deployer {
 
@@ -38,28 +48,13 @@ class Deployer {
         this.debug = debug
     }
 
-    Deployer(String username, String password, boolean debug) {
-        this(new SimplePortScanningDeviceDetector(), username, password, debug)
-    }
-
-    Deployer(DeviceDetector deviceDetector, boolean debug) {
-        this(deviceDetector, 'pi', 'raspberry', debug)
-    }
-
-    Deployer(boolean debug) {
-        this('pi', 'raspberry', debug)
-    }
-
-    Deployer() {
-        this(false)
-    }
-
     def close() {
+        deviceDetector.close()
         artifactResolver.close()
     }
 
-    Device deploy(Map<String, String> additionalProperties) {
-        def gatewayJar = artifactResolver.artifactStream('io.rhiot', 'rhiot-gateway-app', '0.1.1-SNAPSHOT')
+    Device deploy(Optional<String> gatewayArtifactCoordinates, Map<String, String> additionalProperties) {
+        def gatewayJar = gatewayArtifact(gatewayArtifactCoordinates)
 
         println('Detecting devices...')
         def supportedDevices = deviceDetector.detectDevices()
@@ -108,7 +103,16 @@ class Deployer {
     }
 
     Device deploy() {
-        deploy([:])
+        deploy(empty(), [:])
+    }
+
+    // Helpers
+
+    @PackageScope
+    Future<InputStream> gatewayArtifact(Optional<String> gatewayArtifactCoordinates) {
+        def coordinatesString = gatewayArtifactCoordinates.orElseGet{ "io.rhiot:rhiot-gateway-app:${artifactVersionFromDependenciesProperties('io.rhiot', 'rhiot-deployer')}"}
+        def coordinates = parseMavenCoordinates(coordinatesString)
+        artifactResolver.artifactStream(coordinates.groupId, coordinates.artifactId, coordinates.version)
     }
 
     // Main runner
@@ -121,8 +125,23 @@ class Deployer {
         }
 
         try {
-            def deployer = parser.hasCredentials() ? new Deployer(parser.username(), parser.password(), parser.debug) : new Deployer(parser.debug)
-            deployer.deploy(parser.properties())
+            switch(parser.command()) {
+                case 'scan':
+                    println 'Scanning local networks for devices...'
+                    println()
+                    println '======================================'
+                    println "Device type\t\tIPv4 address"
+                    println '--------------------------------------'
+                    def detector = new SimplePortScanningDeviceDetector()
+                    detector.detectDevices().each {
+                        println "${it.type()}\t\t${it.address()}"
+                    }
+                    detector.close()
+                    break;
+                case 'deploy-gateway':
+                    deployGateway(parser)
+                    break;
+            }
         } catch (Exception e) {
             if (!(e instanceof ConsoleInformation)) {
                 print 'Error: '
@@ -133,6 +152,26 @@ class Deployer {
             }
         } finally {
             Runtime.getRuntime().exit(0)
+        }
+    }
+
+    // Helpers
+
+    @PackageScope
+    static deployGateway(ConsoleInputParser parser) {
+        def Deployer deployer = null
+        try {
+            def deployerBuilder = new DeployerBuilder()
+            if (parser.hasCredentials()) {
+                deployerBuilder.username(parser.username().get()).password(parser.password().get())
+            }
+            deployerBuilder.debug(parser.debug)
+            deployer = deployerBuilder.build()
+            deployer.deploy(parser.artifact(), parser.properties())
+        } finally {
+            if(deployer != null) {
+                deployer.close()
+            }
         }
     }
 

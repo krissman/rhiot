@@ -16,11 +16,22 @@
  */
 package io.rhiot.deployer
 
+import static java.util.Optional.empty
+import static java.util.Optional.of
+
 class ConsoleInputParser {
 
-    String[] args
+    // Constants
 
-    ConsoleInputParser(String[] args) {
+    static final def DEFAULT_COMMAND = 'deploy-gateway'
+
+    // Members
+
+    private final String[] args
+
+    // Constructors
+
+    ConsoleInputParser(String... args) {
         this.args = args
     }
 
@@ -29,20 +40,33 @@ class ConsoleInputParser {
     }
 
     String helpText() {
-        """Welcome to the Camel IoT Labs Deployer application.
+        """Welcome to the Rhiot Project Deployer application.
 
-Usage: docker run -t camellabs/deployer
+Usage: docker run -t rhiot/deployer [deploy-gateway|scan]
+
+Commands:
+deploy-gateway (default)    Deploys gateway to the device.
+scan                        Lists possible target devices.
 
 Options:
- -h --help                      Prints this help page.
- -d --debug                     Debug (verbose) mode.
- -Pfoo=bar                      Adds foo=bar configuration property to the deployed gateway. Can be used multiple times.
- -u=user --username=user        SSH username of the target device.
- -p=secret --password=secret    SSH password of the target device."""
+ -h --help                                                      Prints this help page.
+ -d --debug                                                     Debug (verbose) mode.
+ -a=group:artifact:version --artifact=group:artifact:version    Overrides default gateway artifact coordinates (io.rhiot:rhiot-gateway-app).
+ -Pfoo=bar                                                      Adds foo=bar configuration property to the deployed gateway. Can be used multiple times.
+ -u=user --username=user                                        SSH username of the target device.
+ -p=secret --password=secret                                    SSH password of the target device."""
     }
 
     boolean isDebug() {
         args.contains('--debug') || args.contains('-d')
+    }
+
+    String command() {
+        def command = args.find{!it.startsWith('-')} ?: DEFAULT_COMMAND
+        if(![DEFAULT_COMMAND, 'scan'].contains(command)) {
+            throw new IllegalArgumentException("No such command - ${command} .")
+        }
+        command
     }
 
     Map<String, String> properties() {
@@ -65,14 +89,23 @@ Options:
         hasUsername && hasPassword
     }
 
-    String username() {
-        def argument = args.find{it.startsWith('--username=') || it.startsWith('-u=')}
-        argument.substring(argument.indexOf('=') + 1)
+    Optional<String> username() {
+        option('username', 'u')
     }
 
-    String password() {
-        def argument = args.find{it.startsWith('--password=') || it.startsWith('-p=')}
-        argument.substring(argument.indexOf('=') + 1)
+    Optional<String> password() {
+        option('password', 'p')
+    }
+
+    Optional<String> artifact() {
+        option('artifact', 'a')
+    }
+
+    // Helpers
+
+    private Optional<String> option(String longOption, String shortOption) {
+        def option = args.find{ it.startsWith("--${longOption}=") || it.startsWith("-${shortOption}=") }
+        option != null ? of(option.substring(option.indexOf('=') + 1)) : empty()
     }
 
 }

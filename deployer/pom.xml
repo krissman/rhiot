@@ -4,13 +4,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <artifactId>rhiot-iot</artifactId>
         <groupId>io.rhiot</groupId>
-        <version>0.1.2-SNAPSHOT</version>
-        <relativePath>..</relativePath>
+        <artifactId>rhiot-bom</artifactId>
+        <version>0.1.3-SNAPSHOT</version>
+        <relativePath>../bom</relativePath>
     </parent>
-
-    <artifactId>rhiot-iot-deployer</artifactId>
+    <name>RHIOT :: Deployer</name>
+    <artifactId>rhiot-deployer</artifactId>
 
     <licenses>
         <license>
@@ -62,6 +62,11 @@
         <dependency>
             <groupId>com.cyrusinnovation</groupId>
             <artifactId>mockito-groovy-support</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.truth</groupId>
+            <artifactId>truth</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

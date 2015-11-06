@@ -21,3 +21,28 @@ If you don't want to install Java and Maven on your machine, you can use our Doc
 
     cd rhiot
     docker run -v `pwd`:/rhiot --privileged -i -t rhiot
+
+## Releasing the project
+
+If you are interested in cutting a release of the project follow steps described below:
+
+### Before you start
+
+You have to had a DockerHub account setting configured in your `~/.m2/settings.xml`:
+    
+    <server>
+      <username>rhiot</username>
+      <password>secret</password>
+      <id>registry.hub.docker.com</id>
+    </server>
+
+### Cutting the release
+
+Execute the following command in the project main directory:
+
+    mvn release:prepare release:perform
+
+### After the release
+
+* update the version on the main page of the project (`readme.md`)
+* update release guide (`docs/release-notes.md`) using GitHub tickets marked as done in the given version

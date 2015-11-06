@@ -16,16 +16,15 @@
  */
 package camel.labs.iot.cloudlet.document.mongodb;
 
-import com.github.camellabs.iot.cloudlet.document.driver.mongodb.BsonMapper;
-import com.github.camellabs.iot.cloudlet.document.driver.mongodb.MongodbDocumentDriver;
-import com.github.camellabs.iot.cloudlet.document.driver.spi.FindByQueryOperation;
+import com.mongodb.Mongo;
+import io.rhiot.datastream.document.mongodb.MongodbDocumentStore;
 import com.google.common.collect.ImmutableMap;
 import de.flapdoodle.embed.mongo.MongodExecutable;
 import de.flapdoodle.embed.mongo.MongodStarter;
 import de.flapdoodle.embed.mongo.config.IMongodConfig;
 import de.flapdoodle.embed.mongo.config.MongodConfigBuilder;
 import de.flapdoodle.embed.mongo.config.Net;
-import org.apache.camel.ProducerTemplate;
+import io.rhiot.datastream.document.FindByQueryOperation;
 import org.apache.camel.TypeConverter;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -53,18 +52,15 @@ import static org.springframework.util.SocketUtils.findAvailableTcpPort;
 public class MongoDbDocumentDriverTest extends Assert {
 
     @Autowired
-    ProducerTemplate producerTemplate;
-
-    @Autowired
     TypeConverter typeConverter;
 
     @Bean
-    MongodbDocumentDriver documentDriver() {
-        return new MongodbDocumentDriver("testdb", producerTemplate, new BsonMapper(typeConverter));
+    MongodbDocumentStore documentDriver(Mongo mongo) {
+        return new MongodbDocumentStore(mongo, "testdb");
     }
 
     @Autowired
-    MongodbDocumentDriver driver;
+    MongodbDocumentStore driver;
 
     public static final int port = findAvailableTcpPort();
 
@@ -88,7 +84,7 @@ public class MongoDbDocumentDriverTest extends Assert {
         Map<String, Object> queryBuilder = ImmutableMap.of("query", query);
 
         // When
-        List<Map<String, Object>> people = driver.findByQuery(new FindByQueryOperation(Person.class, queryBuilder));
+        List<Map<String, Object>> people = driver.findByQuery(FindByQueryOperation.findByQueryOperation(Person.class, queryBuilder));
 
         // Then
         assertEquals(0, people.size());

@@ -17,16 +17,16 @@
 package io.rhiot.gateway
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.rhiot.steroids.bootstrap.Bootstrap
+import io.rhiot.steroids.camel.CamelBootInitializer
 import io.vertx.core.Vertx
 import org.jolokia.jvmagent.JvmAgent
 import org.reflections.Reflections
 import org.reflections.util.ConfigurationBuilder
 import org.slf4j.Logger
 
+import static io.rhiot.steroids.camel.CamelBootInitializer.vertx
 import static io.rhiot.utils.Properties.stringProperty
-import static io.rhiot.vertx.camel.CamelContextFactories.closeCamelContext
-import static io.rhiot.vertx.camel.CamelContextFactories.connect
-import static io.vertx.groovy.core.Vertx.vertx
 import static java.lang.Boolean.parseBoolean
 import static org.reflections.util.ClasspathHelper.forJavaClassPath
 import static org.slf4j.LoggerFactory.getLogger
@@ -34,32 +34,32 @@ import static org.slf4j.LoggerFactory.getLogger
 /**
  * IoT gateway boostrap. Starts Vert.x event bus, detects verticles and starts these.
  */
-class Gateway {
+class Gateway extends Bootstrap {
 
-    private static final Logger LOG = getLogger(Gateway.class)
-
-    final def vertx = vertx()
+    private static final LOG = getLogger(Gateway.class)
 
     final def classpath = new Reflections(new ConfigurationBuilder().setUrls(forJavaClassPath()))
 
     static final def JSON = new ObjectMapper()
 
+    // Life-cycle
+
     Gateway start() {
-        connect(vertx.delegate.asType(Vertx.class))
+        def gateway = super.start() as Gateway
         classpath.getTypesAnnotatedWith(GatewayVerticle.class).each {
             LOG.debug('Classpath scanner found gateway verticle {}.', it.name)
             String conditionProperty = it.getAnnotation(GatewayVerticle.class).conditionProperty()
             if(conditionProperty.isEmpty() || parseBoolean(stringProperty(conditionProperty))) {
                 LOG.debug('Loading gateway verticle {}.', it.name)
-                vertx.deployVerticle("groovy:${it.name}")
+                vertx().deployVerticle("groovy:${it.name}")
             }
         }
-        this
+        gateway
     }
 
-    void stop() {
-        closeCamelContext();
-        vertx.close()
+    @Override
+    Gateway stop() {
+        super.stop() as Gateway
     }
 
     // Main method handler

@@ -6,10 +6,10 @@
     <parent>
         <groupId>io.rhiot</groupId>
         <artifactId>rhiot-cloudlet-device-parent</artifactId>
-        <version>0.1.2-SNAPSHOT</version>
+        <version>0.1.3-SNAPSHOT</version>
         <relativePath>..</relativePath>
     </parent>
-
+    <name>RHIOT :: Cloudlets :: Device :: Default</name>
     <artifactId>rhiot-cloudlet-device</artifactId>
 
     <licenses>

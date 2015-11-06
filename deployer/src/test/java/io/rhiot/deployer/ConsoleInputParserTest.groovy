@@ -19,7 +19,29 @@ package io.rhiot.deployer
 import org.junit.Assert
 import org.junit.Test
 
+import static com.google.common.truth.Truth.assertThat
+
 class ConsoleInputParserTest extends Assert {
+
+    @Test(expected = IllegalArgumentException.class)
+    void shouldValidateInvalidCommand() {
+        new ConsoleInputParser('someCommand').command()
+    }
+
+    @Test
+    void shouldReturnDefaultCommand() {
+        assertThat(new ConsoleInputParser('-someOption=foo').command()).isEqualTo('deploy-gateway')
+    }
+
+    @Test
+    void shouldReturnScanCommandFromBeginning() {
+        assertThat(new ConsoleInputParser('scan', '-a=foo:bar:1').command()).isEqualTo('scan')
+    }
+
+    @Test
+    void shouldReturnScanCommandFromEnd() {
+        assertThat(new ConsoleInputParser('-a=foo:bar:1', 'scan').command()).isEqualTo('scan')
+    }
 
     @Test
     void shouldValidateUsernameWithoutPassword() {
@@ -34,17 +56,32 @@ class ConsoleInputParserTest extends Assert {
 
     @Test
     void shouldValidateUsernameAndPassword() {
-        assertTrue(new ConsoleInputParser('--username=foo', '--password=bar').hasCredentials())
+        assertThat(new ConsoleInputParser('--username=foo', '--password=bar').hasCredentials()).isTrue()
     }
 
     @Test
     void shouldValidateNoUsernameAndPassword() {
-        assertFalse(new ConsoleInputParser().hasCredentials())
+        assertThat(new ConsoleInputParser().hasCredentials()).isFalse()
     }
 
     @Test
     void shouldParseUsername() {
-        assertEquals('foo', new ConsoleInputParser('--username=foo').username())
+        assertThat(new ConsoleInputParser('--username=foo').username().get()).isEqualTo('foo')
+    }
+
+    @Test
+    void shouldParseGatewayArtifact() {
+        assertThat(new ConsoleInputParser('--artifact=foo:bar:1').artifact().get()).isEqualTo('foo:bar:1')
+    }
+
+    @Test
+    void shouldParseGatewayArtifactShort() {
+        assertThat(new ConsoleInputParser('-a=foo:bar:1').artifact().get()).isEqualTo('foo:bar:1')
+    }
+
+    @Test
+    void shouldParseEmptyGatewayArtifact() {
+        assertThat(new ConsoleInputParser('--someRandomOption').artifact().isPresent()).isFalse()
     }
 
 }

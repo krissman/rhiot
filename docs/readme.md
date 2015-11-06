@@ -1,8 +1,8 @@
 # Rhiot - the messaging platform for the Internet Of Things
 
 <a href="https://github.com/rhiot/rhiot"><img src="../rhiot.png" align="left" height="280" hspace="30"></a>
-Rhiot is the messaging platform for the Internet Of Things. We are focused on the adoption of the
-[Red Hat JBoss middleware portfolio](http://www.redhat.com/en/technologies/jboss-middleware) to provide the solutions to
+Rhiot is the messaging platform for the Internet Of Things. We are focused on an adoption of the
+[Red Hat JBoss middleware portfolio](http://www.redhat.com/en/technologies/jboss-middleware) to provide solutions to
 the common IoT-related challenges.
 
 Rhiot comes with the following features:
@@ -27,6 +27,10 @@ Rhiot comes with the following features:
     - [Logging heartbeat](#logging-heartbeat)
     - [MQTT heartbeat](#mqtt-heartbeat)
     - [LED heartbeat](#led-heartbeat)
+  - [Using GPS receivers with gateway](#using-gps-receivers-with-gateway)
+    - [Enabling GPS receiver](#enabling-gps-receiver)
+    - [Enriching GPS data](#enriching-gps-data)
+    - [Sending collected GPS data with a data center](#sending-collected-gps-data-with-a-data-center)
   - [Monitoring gateway with Jolokia](#monitoring-gateway-with-jolokia)
   - [Adding the custom code to the gateway](#adding-the-custom-code-to-the-gateway)
     - [Adding custom Groovy Camel verticle to the gateway](#adding-custom-groovy-camel-verticle-to-the-gateway)
@@ -36,13 +40,24 @@ Rhiot comes with the following features:
     - [URI format](#uri-format)
     - [Options](#options)
     - [Process manager](#process-manager)
-  - [Camel Kura Wifi component](#camel-kura-wifi-component)
+    - [BU353 type converters](#bu353-type-converters)
+  - [Camel GPSD component](#camel-gpsd-component)
     - [Maven dependency](#maven-dependency-1)
     - [URI format](#uri-format-1)
     - [Options](#options-1)
-    - [Detecting Kura NetworkService](#detecting-kura-networkservice)
-  - [Camel TinkerForge component](#camel-tinkerforge-component)
+    - [Process manager](#process-manager-1)
+    - [Installer](#installer-1)
+  - [Camel Kura Wifi component](#camel-kura-wifi-component)
     - [Maven dependency](#maven-dependency-2)
+    - [URI format](#uri-format-2)
+    - [Options](#options-2)
+    - [Detecting Kura NetworkService](#detecting-kura-networkservice)
+  - [Camel OpenIMAJ component](#camel-openimaj-component)
+    - [Maven dependency](#maven-dependency-7)
+    - [URI format](#uri-format-7)
+    - [Options](#options-7)
+  - [Camel TinkerForge component](#camel-tinkerforge-component)
+    - [Maven dependency](#maven-dependency-3)
     - [General URI format](#general-uri-format)
       - [Ambientlight](#ambientlight)
       - [Temperature](#temperature)
@@ -53,7 +68,7 @@ Rhiot comes with the following features:
       - [Consuming:](#consuming)
       - [Producing](#producing)
   - [Camel Pi4j component](#camel-pi4j-component)
-    - [Maven dependency](#maven-dependency-3)
+    - [Maven dependency](#maven-dependency-4)
     - [URI format for GPIO](#uri-format-for-gpio)
         - [Optional URI Parameters](#optional-uri-parameters-1)
       - [Consuming:](#consuming-1)
@@ -63,11 +78,17 @@ Rhiot comes with the following features:
         - [Optional URI Parameters](#optional-uri-parameters-2)
         - [i2c driver](#i2c-driver)
   - [Camel PubNub component](#camel-pubnub-component)
-    - [Maven dependency](#maven-dependency-4)
+    - [Maven dependency](#maven-dependency-5)
     - [General URI format](#general-uri-format-1)
         - [URI Parameters](#uri-parameters)
       - [Consuming:](#consuming-2)
       - [Producing](#producing-2)
+  - [Camel Webcam component](#camel-webcam-component)
+    - [Maven dependency](#maven-dependency-6)
+    - [URI format](#uri-format-3)
+    - [Options](#options-3)
+    - [Process manager](#process-manager-2)
+    - [Installer](#installer-2)
 - [Rhiot Cloud](#rhiot-cloud)
   - [Architecture](#architecture)
   - [Dockerized Rhiot Cloud](#dockerized-rhiot-cloud)
@@ -103,19 +124,28 @@ Rhiot comes with the following features:
     - [Mock sensor to the external MQTT broker](#mock-sensor-to-the-external-mqtt-broker)
     - [Sample results for the RPI2 hardware kit](#sample-results-for-the-rpi2-hardware-kit)
 - [Steroids configuration framework](#steroids-configuration-framework)
+  - [Reading application properties](#reading-application-properties)
+  - [Steroids bootstrap](#steroids-bootstrap)
   - [Injecting MongoDB client](#injecting-mongodb-client)
 - [Quickstarts](#quickstarts)
+  - [AMQP cloudlet quickstart](#amqp-cloudlet-quickstart)
+    - [Creating and running the AMQP cloudlet project](#creating-and-running-the-amqp-cloudlet-project)
+    - [AMQP broker](#amqp-broker)
+    - [Sample chat application](#sample-chat-application)
+    - [Architectural overview](#architectural-overview)
   - [MQTT cloudlet quickstart](#mqtt-cloudlet-quickstart)
     - [Creating and running the MQTT cloudlet project](#creating-and-running-the-mqtt-cloudlet-project)
     - [MQTT broker](#mqtt-broker)
+    - [Sample chat application](#sample-chat-application-1)
+    - [Architectural overview](#architectural-overview-1)
 - [Articles, presentations & videos](#articles-presentations-&-videos)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Rhiot IoT gateway
 
-Camel IoT gateway is the small fat jar application that can be installed into the field device. Gateway acts as a bridge
-between the sensors and the data center. Under the hood, Camel IoT gateway is the fat jat running
+*Rhiot gateway* is the small fat jar application that can be installed into the field device. Gateway acts as a bridge
+between the sensors and the data center. Under the hood, Rhiot gateway is the fat jar running
 [Vert.x](http://vertx.io) and Apache Camel.
 
 ### Installing gateway on the Raspbian
@@ -123,7 +153,7 @@ between the sensors and the data center. Under the hood, Camel IoT gateway is th
 In order to install Camel IoT gateway on the Raspberry Pi running Raspbian, connect the device to your local network
 (using WiFi or the ethernet cable) and execute the following command on the laptop connected to the same network as your Pi:
 
-    docker run --net=host camellabs/deploy-gateway
+    docker run --net=host rhiot/deploy-gateway
 
 From this point forward Camel IoT gateway will be installed on your device as `camel-iot-gateway` service and started
 whenever the device boots up. Under the hood, gateway deployer performs the simple port scanning in the local network
@@ -131,30 +161,38 @@ and attempts to connect to the Raspian devices using the default SSH credentials
 
 To see all the options available for the gateway deployer, execute the following command:
 
-    docker run --net=host camellabs/deploy-gateway --help
+    docker run --net=host rhiot/deploy-gateway --help
 
 In case of problems with the gateway, you can try to run it in verbose mode (called *debug mode*):
 
-    docker run --net=host camellabs/deploy-gateway --debug
+    docker run --net=host rhiot/deploy-gateway --debug
 
 You can also configure the gateway during the deployment process using the `-P` option. For example to set the configuration property
 responsible for gateway heartbeats interval, execute the following command:
 
-    docker run --net=host camellabs/deploy-gateway -Pcamellabs_iot_gateway_heartbeat_rate=10000
+    docker run --net=host rhiot/deploy-gateway -Pcamellabs_iot_gateway_heartbeat_rate=10000
 
 You can use the `-P` option multiple times:
 
-    docker run --net=host camellabs/deploy-gateway -Pfoo=bar -Pbar=qux
+    docker run --net=host rhiot/deploy-gateway -Pfoo=bar -Pbar=qux
 
-If you would like to use different SSH credentials then default (username `pi`, password `raspberry`), then pass the
+If you would like to use different SSH credentials than default (username `pi`, password `raspberry`), then pass the
 `--username` and `--password` options to the deployer:
 
-    docker run --net=host camellabs/deploy-gateway --username=john --password=secret
+    docker run --net=host rhiot/deploy-gateway --username=john --password=secret
+
+If you would like to deploy your customized gateway fat jar, you can specify its Maven coordinates when running the deployer:
+
+    docker run --net=host rhiot/deploy-gateway --artifact=com.example:custom-gateway:1.0
+
+To find out what supported devices are available in your local network, execute the following command:
+
+    docker run --net=host rhiot/deploy-gateway scan
 
 ### Configuration of the gateway
 
-The gateway configuration file is `/etc/default/camel-labs-iot-gateway`. The latter file is loaded by the gateway 
-starting script. It means that all the configuration environment variables can be added there. For example to set the
+The gateway configuration file is `/etc/default/camel-labs-iot-gateway`. This file is loaded by the gateway 
+starting script. It means that all the configuration environment variables can be added here. For example to set the
 `foo_bar_baz` configuration property to value `qux`, the following environment variable should be added to the
 `/etc/default/camel-labs-iot-gateway` file:
 
@@ -229,6 +267,71 @@ Change LED output port like this:
 
 Please add resistor (220 Ohms) between LED and Mass (0v) to avoid excessive current through it.
 
+### Using GPS receivers with gateway
+
+Rhiot gateway comes with a dedicated GPS support. It makes it easier to collect, store and forward the GPS data to a
+data center (to the [Rhiot Cloud](https://github.com/rhiot/rhiot/blob/master/docs/readme.md#rhiot-cloud) in particular).
+Under the hood gateway GPS support uses the [GPSD component](https://github.com/rhiot/rhiot/blob/master/docs/readme.md#camel-gpsd-component).
+
+#### Enabling GPS receiver
+
+In order to start collecting GPS data on the gateway device, just add `gps=true` property to the gateway configuration.
+Gateway with the GPS support enabled will poll the GPS receiver every 5 seconds and store the GPS coordinates in the
+`/var/rhiot/gps` directory (or the other directory indicated using `gps_store_directory` configuration property). The data
+collected from the GPS receiver will be serialized to the JSON format. Each GPS read is saved to in a dedicated file.
+
+The JSON schema of the collected coordinates is similar to teh following example:
+
+    {"timestamp": 1445356703704, 
+      "lat": 20.0, "lng": 30.0}
+
+#### Enriching GPS data
+
+Sometimes you would like to collect not only the GPS coordinates, but some other sensor data associated with the given
+location. For example to track the temperature or WiFi networks available in various locations. If you would like to
+enrich collected GPS data with value read from some other endpoint, set the `gps_enrich` property to the Camel endpoint
+URI value. For example setting `gps_enrich=kura-wifi:*/*` can be used to poll for available WiFi networks using
+[Camel Kura WiFi component](https://github.com/rhiot/rhiot/blob/master/docs/readme.md#camel-kura-wifi-component) and adding
+the results to collected GPS payloads.
+
+The enriched JSON schema of the collected coordinates is similar to teh following example:
+
+    {"timestamp": 1445356703704, 
+      "lat": 20.0, "lng": 30.0,
+      "enriched": {
+        "foo": "bar"
+      }
+    }      
+      
+#### Sending collected GPS data with a data center
+
+If you would like to synchronize the collected GPS data with a data center, consider using the out-of-the-box
+functionality that Rhiot gateway offers. In order to enable an automatic synchronization of the GPS coordinates, set the
+`gps_cloudlet_sync` configuration property to `true`.
+
+The gateway synchronization route reads GPS messages saved in the
+gateway store (see the section above) and sends those to the destination endpoint. The target Camel endpoint can be specified using
+the `gps_cloudlet_endpoint` configuration property. For example the following property tells a gateway to send
+the GPS data to a MQTT broker:
+
+    gps_cloudlet_endpoint=paho:topic?brokerUrl=tcp://broker.com:1234
+
+The default data center endpoint is Netty REST call (using POST method) - `netty4-http:http://${cloudletAddress}/api/document/save/GpsCoordinates`, where
+`gps_cloudlet_address` configuration property has to be configured to match your HTTP API address (for example 
+`gps_cloudlet_address=myapi.com:8080`).
+
+The default data format used by the gateway is JSON, where the message schema is similar to the folowwing example:
+
+     {"client": "my-device",
+       "clientId": "local-id-generated-on-client",
+       "timestamp": 1445356703704,
+       "latitude": 20.0,
+       "longitude": 30.0,
+       "enriched": {
+         "foo": "bar"
+       }
+     }
+
 ### Monitoring gateway with Jolokia
 
 The gateway exposes its JMX beans using the [Jolokia REST API](https://jolokia.org). The default Jolokia URL for the
@@ -249,9 +352,11 @@ project including the gateway core dependency:
       <dependency>
         <groupId>io.rhiot</groupId>
         <artifactId>rhiot-gateway</artifactId>
-        <version>0.1.1</version>
+        <version>${rhiot.version}</version>
       </dependency>
     </dependencies>
+
+Avaliable for rhiot.version >= 0.1.1
 
 Now all your custom code can just be added to the project. The resulting fat jar will contain both gateway core logic
 and your custom code.
@@ -266,9 +371,11 @@ following jar:
       <dependency>
         <groupId>io.rhiot</groupId>
         <artifactId>rhiot-vertx</artifactId>
-        <version>0.1.1</version>
+        <version>${rhiot.version}</version>
       </dependency>
     </dependencies>
+    
+ Avaliable for rhiot.version >= 0.1.1
 
 In order to create Vert.x verticle that can access single `CamelContex` instance shared between all the verticles
 within the given JVM, extend the `io.rhiot.vertx.camel.GroovyCamelVerticle` class:
@@ -289,12 +396,14 @@ annotation. All those verticles are automatically loaded into the Vert.x backbon
 As you can see in the example above you can read the messages from the event bus and forward these to your Camel
 route using the `fromEventBus(channel, closure(route))` method. You can also access the Camel context directly:
 
+    import static io.rhiot.steroids.camel.CamelBootInitializer.camelContext
+
     @GatewayVerticle
     class HeartbeatConsumerVerticle extends GroovyCamelVerticle {
 
         @Override
         void start() {
-            camelContext.addRoutes(new RouteBuilder(){
+            camelContext().addRoutes(new RouteBuilder(){
                 @Override
                 void configure() {
                     from('timer:test').to('seda:test')
@@ -304,16 +413,18 @@ route using the `fromEventBus(channel, closure(route))` method. You can also acc
 
     }
 
-## Camel IoT components
+## Rhiot IoT components
 
-Camel IoT Labs brings some extra components for the Apache Camel intended to make both device- and server-side IoT
+Rhiot project brings some extra components for the Apache Camel intended to make both device- and server-side IoT
 development easier.
 
 ### Camel GPS BU353 component
 
-[BU353](http://usglobalsat.com/p-688-bu-353-s4.aspx#images/product/large/688_2.jpg) is one of the most popular and the 
-cheapest GPS units on the market. It is connected to the device via the USB port. If you are looking for good and cheap
-GPS receiver for your IoT solution, definitely consider purchsing this unit.
+**Deprecated:** BU353 component is deprecated and will be removed soon on the behalf of the
+[GPSD component](https://github.com/rhiot/rhiot/blob/master/docs/readme.md#camel-gpsd-component).
+
+[BU353](http://usglobalsat.com/p-688-bu-353-s4.aspx#images/product/large/688_2.jpg) is one of the most popular and cheapest GPS units on the market. 
+It is connected to the device via the USB port. If you are looking for good and cheap GPS receiver for your IoT solution, definitely consider purchasing this unit.
 
 Camel GPS BU353 component can be used to read current GPS information from that device. With Camel GPS BU353 you can
 just connect the receiver to your computer's USB port and read the GPS data - the component
@@ -329,19 +440,23 @@ Maven users should add the following dependency to their POM file:
     <dependency>
       <groupId>io.rhiot</groupId>
       <artifactId>camel-gps-bu353</artifactId>
-      <version>0.1.1</version>
+      <version>${rhiot.version}</version>
     </dependency>
+
+Avaliable for rhiot.version >= 0.1.2
+
 
 #### URI format
 
 BU353 component supports only consumer endpoints. The BU353 consumer is the polling one, i.e. it periodically asks the GPS device for the
-current coordinates. The Camel endpoint URI format for the B3353 consumer is as follows:
+current coordinates. The Camel endpoint URI format for the BU353 consumer is as follows:
 
     gps-bu353:label
     
 Where `label` can be replaced with any text label:
 
     from("gps-bu353:current-position").
+      convertBodyTo(String.class).
       to("file:///var/gps-coordinates");
       
 BU353 consumer receives the `io.rhiot.component.gps.bu353.ClientGpsCoordinates` instances:
@@ -380,8 +495,153 @@ the manager as the bean:
         new CustomProcessManager();
     }
 
-Custom process manager may be useful if for some reasons your Linux distribution requires executing some unusual commands
+Custom process manager may be useful if your Linux distribution requires executing some unusual commands
 in order to make the GPSD up and running.
+
+#### BU353 type converters
+
+BU353 component comes with the two type converters:
+- `String` => `io.rhiot.component.gps.bu353.ClientGpsCoordinates`
+- `io.rhiot.component.gps.bu353.ClientGpsCoordinates` => `String`
+
+### Camel GPSD component
+
+Camel [GPSD](http://www.catb.org/gpsd) component can be used to read current GPS information from GPS devices. With Camel GPSD you can
+just connect a GPS receiver to your computer's USB port and read the GPS data - the component
+will make sure that GPS daemon is up, running and
+switched to the [NMEA mode](http://www.gpsinformation.org/dale/nmea.htm). The component also takes care of parsing the
+GPSD data read from the server, so you can enjoy the `io.rhiot.component.gps.gpsd.ClientGpsCoordinates`
+instances received by your Camel routes.
+
+The GPSD component has been particularly tested against the BU353 GPS unit.
+[BU353](http://usglobalsat.com/p-688-bu-353-s4.aspx#images/product/large/688_2.jpg) is one of the most popular and cheapest GPS units on the market.
+It is connected to the device via the USB port. If you are looking for good and cheap GPS receiver for your IoT solution, definitely consider purchasing this unit.
+
+#### Maven dependency
+
+Maven users should add the following dependency to their POM file:
+
+    <dependency>
+      <groupId>io.rhiot</groupId>
+      <artifactId>camel-gpsd</artifactId>
+      <version>${rhiot.version}</version>
+    </dependency>
+
+#### URI format
+
+The default GPSD consumer is event driven, subscribing to *Time-Position-Velocity* reports and converting them to ClientGpsCoordinates for immediate consumption.
+This option offers up to date information, but requires more resources than the scheduled consumer or the producer.
+
+The Camel endpoint URI format for the GPSD consumer is as follows:
+
+    gpsd:label
+    
+Where `label` can be replaced with any text label:
+
+    from("gpsd:current-position").
+      convertBodyTo(String.class).
+      to("file:///var/gps-coordinates");
+      
+      
+A scheduled consumer is also supported. This kind of consumer polls GPS receiver every 5 seconds by default. In order to 
+use it enable the `scheduled` param on the endpoint, just as demonstarted on the snippet below:
+
+    from("gpsd:current-position?scheduled=true").
+      convertBodyTo(String.class).
+      to("file:///var/gps-coordinates");
+      
+Also the GPSD producer can be used to poll a GPS unit "on demand" and return the current location, for example;
+
+    from("jms:current-position").
+      to("gpsd:gps");
+      
+To subscribe to events or poll a device on another host you have to do two things:
+* start GPSD on that host with the param -G to listen on all addresses (eg `gpsd -G /dev/ttyUSB0`)
+* pass the host and optionally port to the GPSD endpoint, just as demonstrated on the snippet below:
+    
+    from("gpsd:current-position?host=localhost?port=2947").
+      convertBodyTo(String.class).
+      to("file:///var/gps-coordinates");
+      
+The message body is a `io.rhiot.component.gpsd.ClientGpsCoordinates` instance:
+
+    ClientGpsCoordinates currentPosition = consumerTemplate.receiveBody("gpsd:current-position", ClientGpsCoordinates.class);     
+
+`ClientGpsCoordinates` class name is prefixed with the `Client` to indicate that these coordinates have been created on the device,
+not on the server side of the IoT solution.
+
+The TPVObject (Time-Position-Velocity report) instance created by a gpsd4java engine is available in exchange under the header
+`io.rhiot.gpsd.tpvObject` (constant `io.rhiot.component.gpsd.GpsdConstants.TPV_HEADER`). The original `TPVObject` can be 
+useful to enrich the payload or do content based routing, eg
+    
+    TPVObject tpvObject = exchange.getIn().getHeader(GpsdConstants.TPV_HEADER, TPVObject.class);
+    if (tpvObject.getSpeed() > 343) {
+        log.info("Camel broke the sound barrier");
+    }
+
+#### Options
+
+| Option                   | Default value                                                                 | Description   |
+|:-------------------------|:-----------------------------------------------------------------------       |:------------- |
+| `host`          | localhost                                                                     | Milliseconds before the polling starts.                                |
+| `port`          | 2947                                                                          | Milliseconds before the polling starts.                                |
+| `distance`      | 0                                                                             | Distance threshold in km before consuming a message, eg 0.1 for 100m.  |
+| `scheduled`     | false                                                                         | Whether the consumer is scheduled or not.  |
+| `consumer.initialDelay`  | 1000                                                                          | Milliseconds before the polling starts. Applies only to scheduled consumers. |
+| `consumer.delay`         | 5000                                                                          | Delay in milliseconds. Applies only to scheduled consumers.  |
+| `consumer.useFixedDelay` | false | Set to true to use a fixed delay between polls, otherwise fixed rate is used. See ScheduledExecutorService in JDK for details. |
+| `restartGpsd`         | true                                                                          | Indicates if the endpoint should try (re)start the local GPSD daemon on start.  |
+| `gpsd4javaEndpoint`         | `new GPSdEndpoint(host, port, new ResultParser())`                        | Registry reference to the `de.taimos.gpsd4java.backend.GPSdEndpoint` instance to be used by the endpoint.  |
+
+
+#### Process manager
+
+Process manager is used by the GPSD component to execute Linux commands responsible for starting GPSD daemon or
+configuring the GPS receive to provide GPS coordinates in the NMEA mode. If for some reason you would like to change
+the default implementation of the process manager used by Camel (i.e. `io.rhiot.utils.process.DefaultProcessManager`),
+you can set it on the component level:
+
+    GpsdComponent gpsd = new GpsdComponent();
+    gpsd.setProcessManager(new CustomProcessManager());
+    camelContext.addComponent("gpsd", gpsd);
+
+If custom process manager is not set on the component, Camel will try to find the manager instance in the
+[registry](http://camel.apache.org/registry.html). So for example for Spring application, you can just configure
+the manager as the bean:
+
+    @Bean
+    ProcessManager myProcessManager() {
+        new CustomProcessManager();
+    }
+
+Custom process manager may be useful if your Linux distribution requires executing some unusual commands
+in order to make the GPSD up and running.
+
+
+#### Installer
+
+The GPSD component installs it's own dependencies for Debian-based systems using apt-get, these include psmisc, gpsd and gpsd-clients,
+as well as their dependencies. 
+You can configure the installer or set an alternate one on the component:
+    
+    GpsdComponent gpsd = new GpsdComponent();
+    gpsd.setInstaller(new CustomInstaller());
+    camelContext.addComponent("gpsd", gpsd);    
+    
+You can also specify alternate/additional dependencies for your platform, if your platform uses my-custom-tools for example, you should configure the component as follows:
+
+    GpsdComponent gpsd = new GpsdComponent();
+    gpsd.setRequiredPackages("my-custom-tools,gpsd,gpsd-clients"); //comma-separated list of packages to install
+    camelContext.addComponent("gpsd", gpsd);    
+    
+If an Installer is not set on the component, Camel will try to find an instance in the
+[registry](http://camel.apache.org/registry.html). So for example for Spring application, you can configure the installer as a bean:
+
+    @Bean
+    Installer myInstaller() {
+        new CustomInstaller();
+    }
+         
 
 ### Camel Kura Wifi component
 
@@ -406,19 +666,21 @@ Maven users should add the following dependency to their POM file:
     <dependency>
       <groupId>io.rhiot</groupId>
       <artifactId>camel-kura</artifactId>
-      <version>0.0.0</version>
+      <version>${rhiot.version}</version>
     </dependency>
     
+ Avaliable for rhiot.version >= 0.1.1
+
 #### URI format
 
-    kura:networkInterface/ssid
+    kura-wifi:networkInterface/ssid
     
 Where both `networkInterface` and `ssid` can be replaced with the `*` wildcard matching respectively all the network 
 interfaces and SSIDs.
 
 For example to read all the SSID available near the device, the following route can be used:
 
-    from("kura:*/*").to("mock:SSIDs");
+    from("kura-wifi:*/*").to("mock:SSIDs");
 
 The Kura WiFi consumer returns the list of the `org.eclipse.kura.net.wifi.WifiAccessPoint` classes returned as a result
 of the WiFi scan:
@@ -450,6 +712,61 @@ in the Camel registry. If exactly one instance of the `NetworkService`  is found
 if you deploy the route into the Kura container), that instance will be used by the Kura component. Otherwise new instance of the
 `org.eclipse.kura.linux.net.NetworkServiceImpl` will be created and cached by the `KuraAccessPointsProvider`.
 
+
+### Camel OpenIMAJ component
+
+Camel OpenIMAJ component can be used to detect faces in images.
+Camel OpenIMAJ component supports only producer endpoints.
+
+#### Maven dependency
+
+Maven users should add the following dependency to their POM file:
+
+    <dependency>
+      <groupId>io.rhiot</groupId>
+      <artifactId>camel-openimag</artifactId>
+      <version>${rhiot.version}</version>
+    </dependency>
+    
+ Avaliable for rhiot.version >= 0.1.3
+
+#### URI format
+
+    openimaj:label
+    
+Where `label` can be replaced with any text label:
+
+    from("webcam:spycam").to("openimaj:face-detection");
+    
+This routes the input stream from the webcam to the openimaj component, 
+when a face is detected the resulting body will be an instance of org.openimaj.image.processing.face.detection.DetectedFace,
+and List<DetectedFace> when there are multiple faces. 
+
+The component uses a face detector based on the Haar cascade by default, optionally set an alternate detector;
+    
+    from("webcam:spycam").to("openimaj:face-detection?faceDetector=#anotherDetector");
+
+Using the ProducerTemplate, the following example uses the FKEFaceDetector which is a wrapper around the Haar detector, providing additional 
+information by finding facial keypoints on top of the face;
+    
+    KEDetectedFace face = template.requestBody("openimaj:face-detection?faceDetector=#fkeFaceDetector", inputStream, KEDetectedFace.class);
+    FacialKeypoint keypoint = face.getKeypoint(FacialKeypoint.FacialKeypointType.EYE_LEFT_LEFT);
+        
+    
+The confidence in the face detection is set to the low default of 1, you can set the minimum confidence threshold on the endpoint;
+    
+    from("webcam:spycam").to("openimaj:face-detection?confidence=50");
+    
+
+#### Options
+
+| Option                    | Default value                                                                 | Description   |
+|:------------------------- |:-----------------------------------------------------------------------       |:------------- |
+| `faceDetector`            | `new HaarCascadeDetector()`                                                   | `org.openimaj.image.processing.face.detection.HaarCascadeDetector' is the default face detector |
+| `confidence`              | 1                                                                             | The minimum confidence of the detection; higher numbers mean higher confidence.      |
+
+
+
 ### Camel TinkerForge component
 
 The Camel Tinkerforge component can be used to connect to the TinkerForge brick deamon.
@@ -461,8 +778,10 @@ Maven users should add the following dependency to their POM file:
     <dependency>
       <groupId>io.rhiot</groupId>
       <artifactId>camel-tinkerforge</artifactId>
-      <version>0.0.0</version>
+      <version>${rhiot.version}</version>
     </dependency>
+ 
+ Avaliable for rhiot.version >= 0.1.1
 
 #### General URI format
 
@@ -558,8 +877,11 @@ Maven users should add the following dependency to their POM file:
     <dependency>
       <groupId>io.rhiot</groupId>
       <artifactId>camel-pi4j</artifactId>
-      <version>0.0.0</version>
+      <version>${rhiot.version}</version>
     </dependency>
+    
+ Avaliable for rhiot.version >= 0.1.1
+
 
 #### URI format for GPIO
 
@@ -651,8 +973,11 @@ Maven users should add the following dependency to their POM file:
     <dependency>
       <groupId>io.rhiot</groupId>
       <artifactId>camel-pubnub</artifactId>
-      <version>0.0.0</version>
+      <version>${rhiot.version}</version>
     </dependency>
+    
+ Avaliable for rhiot.version >= 0.1.1
+
 
 #### General URI format
 
@@ -706,6 +1031,133 @@ Route the collect data and sendt it to pubnub channel mychannel:
     .bean(EventGeneratorBean.class, "getEvent()")
     .convertBodyTo(JSONObject.class)
     .to("pubnub://pubsub:mychannel?uuid=deviceuuid&publisherKey=mypubkey");
+    
+
+### Camel Webcam component
+
+Camel [Webcam](http://webcam-capture.sarxos.pl/) component can be used to capture still images and detect motion.
+With Camel Webcam you can connect a camera to your device's USB port, or install the camera mod on the Raspberry Pi board for example, 
+and poll for an image periodically and respond to motion events.
+The body of the message is the current image as a BufferedInputStream, while motion events are stored in the header 'io.rhiot.webcam.webcamMotionEvent'. 
+This event may be useful for getting the image captured prior to the motion event, as well the Points where the motion occurred and the center of motion gravity. 
+
+
+#### Maven dependency
+
+Maven users should add the following dependency to their POM file:
+
+    <dependency>
+      <groupId>io.rhiot</groupId>
+      <artifactId>camel-webcam</artifactId>
+      <version>${rhiot.version}</version>
+    </dependency>
+    
+Avaliable for rhiot.version >= 0.1.2
+
+#### URI format
+
+
+The Camel endpoint URI format for the Webcam consumer is as follows:
+
+    webcam:label
+    
+Where `label` can be replaced with any text label:
+
+    from("webcam:spycam").
+      to("file:///var/spycam");
+      
+This route creates a scheduled consumer taking 1 frame per second and writes it to file in the PNG format.
+
+Alternatively, respond to motion events by setting the endpoint parameter 'motion' to true.
+
+    from("webcam:spycam?motion=true").
+      to("file:///var/spycam");
+      
+You can also poll the webcam for a single image, for example;
+
+    from("jms:webcam").
+      to("webcam:spycam");
+      
+Specify the resolution with custom width and height, or the resolution name;
+
+    from("webcam:spycam?resolution=HD720").
+      to("seda:cam")
+      
+#### Options
+
+| Option                   | Default value                                                                 | Description   |
+|:-------------------------|:-----------------------------------------------------------------------       |:------------- |
+| `consumer.deviceName`    |                                                                               | Specify the webcam device name, if absent the first device available is used, eg /dev/video0.  |
+| `consumer.format`        | PNG                                                                           | Capture format, one of 'PNG,GIF,JPG'  |
+| `consumer.initialDelay`  | 1000                                                                          | Milliseconds before the polling starts. Applies only to scheduled consumers. |
+| `consumer.motion`        | false                                                                         | Whether to listen for motion events.                                |
+| `consumer.motionInterval`| 500                                                                           | Interval in milliseconds to detect motion.                               |
+| `consumer.pixelThreshold`| 25                                                                            | Intensity threshold when motion is detected (0 - 255)  |
+| `consumer.areaThreshold` | 0.2                                                                           | Percentage threshold of image covered by motion (0 - 100)  |
+| `consumer.motionInertia` | -1 (2 * motionInterval)                                                       | Motion inertia (time when motion is valid)  |
+| `consumer.resolution`    | QVGA                                                                          | Resolution to use (PAL, HD720, VGA etc)     |
+| `consumer.width`         | 320                                                                           | Resolution width, note that resolution takes precendence.  |
+| `consumer.height`        | 240                                                                           | Resolution height, note that resolution takes precendence.  |
+| `consumer.delay`         | 1000                                                                          | Delay in milliseconds. Applies only to scheduled consumers.  |
+| `consumer.useFixedDelay` | false | Set to true to use a fixed delay between polls, otherwise fixed rate is used. See ScheduledExecutorService in JDK for details. |
+
+
+#### Process manager
+
+Process manager is also used by the Webcam component to execute Linux commands responsible for starting the webcam driver and  
+configuring the image format and resolution. If for some reason you would like to change
+the default implementation of the process manager used by Camel (i.e. `io.rhiot.utils.process.DefaultProcessManager`),
+you can set it on the component level:
+
+    WebcamComponent webcam = new WebcamComponent();
+    webcam.setProcessManager(new CustomProcessManager());
+    camelContext.addComponent("webcam", webcam);
+
+If custom process manager is not set on the component, Camel will try to find the manager instance in the
+[registry](http://camel.apache.org/registry.html). So for example for Spring application, you can just configure
+the manager as the bean:
+
+    @Bean
+    ProcessManager myProcessManager() {
+        new CustomProcessManager();
+    }
+
+Custom process manager may be useful if your Linux distribution or camera requires executing some unusual commands
+in order to load the v4l2 (Video for Linux) module.
+
+
+#### Installer
+
+For some Linux+webcam combinations, the webcam component requires `v4l-utils` and its dependencies to be installed on an
+operating system. By default the Webcam component installs `v4l-utils` using apt-get, you can configure the installer or 
+set an alternate one on the component:
+    
+    WebcamComponent webcam = new WebcamComponent();
+    webcam.setInstaller(new BrewInstaller());
+    camelContext.addComponent("webcam", webcam);    
+    
+You can also specify alternate dependencies for your platform, if your platform uses my-custom-v4l-utils, configure the component as follows:
+
+    WebcamComponent webcam = new WebcamComponent();
+    webcam.setRequiredPackages("my-custom-v4l-utils");  //comma-separated list of packages to install
+    camelContext.addComponent("webcam", webcam);    
+    
+If an Installer is not set on the component, Camel will try to find an instance in the
+[registry](http://camel.apache.org/registry.html). So for example for Spring application, you can configure the installer as a bean:
+
+    @Bean
+    Installer myInstaller() {
+        CustomInstaller installer = new CustomInstaller();
+        installer.setTimeout(60000 * 10); //Allow up to 10 minutes to install packages
+    }
+
+By default an installer ignores problems with the webcam packages installation and only logs the warning using a
+logger WARN message. If you would like the component to thrown an exception instead of logging a message, set 
+`ignoreInstallerProblems` property of the `WebcamComponent` to `true`:
+
+    WebcamComponent webcam = new WebcamComponent();
+    webcam.setIgnoreInstallerProblems(true);
+    camelContext.addComponent("webcam", webcam); 
 
 ## Rhiot Cloud
 
@@ -768,7 +1220,7 @@ volume container. If such volume doesn't exist, Rhiot Cloud script will create i
 ### Device management cloudlet
 
 The foundation of the every IoT solution is the device management system. Without the centralized coordination of your
-*things*, you can't properly orchestrate how your devices communicates with each other. Also the effective monitoring of
+*things*, you can't properly orchestrate how your devices communicate with each other. Also the effective monitoring of
 the IoT system, without the devices registered in the centralized cloud, becomes almost impossible.
 
 Device Management Cloudlet provides backend service for registering and tracking devices connected to the Rhiot Cloud.
@@ -925,7 +1377,7 @@ instead of the real device. If there is no historical value available for the gi
 
 ##### Creating virtual devices
 
-Device Cloudlet offers you the option to create the *virtual devices*. Virtual devices can be used to represent the clients whom
+Device Cloudlet offers you the option to create the *virtual devices*. Virtual devices can be used to represent the clients which
 can't use LWM2M API. For example the Android phone could use REST calls only to create and maintain the projection of
 itself as the virtual device even if you can't install LWM2M client on that device.
 
@@ -1011,7 +1463,7 @@ All you need to do is to enter the unique identifier of the device:
 
 <img src="images/console-device-create.png" align="center" height="400" hspace="30" >
 
-The device will be registered in the Rhiot Cloud and visibile as soon as you click the `Create virtual device` button.
+The device will be registered in the Rhiot Cloud and visible as soon as you click the `Create virtual device` button.
 
 <img src="images/console-device-created.png" align="center" height="400" hspace="30" >
 
@@ -1033,11 +1485,11 @@ the MongoDB registry. The MongoDB client can be configured using the [Steroids M
 
 ##### Registry cache
 
-As the access to the device information is crucial for all the IoT systems, it should have be implemented as efficiently
+As the access to the device information is crucial for all the IoT systems, it should have been implemented as efficiently
 as possible. As devices information doesn't change very often, it should be cached in the memory whenever possible. Device
-Management Cloudlet uses the [Infinispan](http://infinispan.org) cache cluster under to hood, to provide the faster access
-to the device information. The Infinispan cache used is clustered (using JGroups under the hood), so the cached information
-remains up-to-date even when many Device Manager Cloudlets instances are executed in the cluster.
+Management Cloudlet uses the [Infinispan](http://infinispan.org) cache cluster under the hood, to provide the faster access
+to the device information. The Infinispan cache used is clustered using JGroups, so the cached information
+remains up-to-date even when many Device Manager Cloudlet instances are executed in the cluster.
 
 #### Clustering Device Management Cloudlet
 
@@ -1046,7 +1498,7 @@ you to run it in the cluster, behind the load balancer of your choice. The defau
 shared by all the cloudlet instances in the cluster. Also the device registry cache used internally by Device Management Cloudlet
 will be automatically synchronized between the deployed cloudlet instances. All you need to do, is to be sure that you have
 the [IP multicast](https://en.wikipedia.org/wiki/IP_multicast) enabled for your local network, so the JGroups cluster can
-be established between the cloudlets instances.
+be established between the cloudlet instances.
 
 Keep in mind that each clustered instance of the Device Management Cloudlet exposes both REST and LWM2M API, so you can
 take advantage of load balancing over all the APIs available.
@@ -1054,7 +1506,7 @@ take advantage of load balancing over all the APIs available.
 #### Devices data analytics
 
 LWM2M protocol provides you the way to read the metrics' values from the devices. However in order to perform the search
-queries against those values, you have to store those in the centralized store. For example if you would like to find all the
+queries against those values, you have to store those in a centralized storage. For example if you would like to find all the
 devices with the firmware version smaller than `x.y.z`, you have to store all the firmware version of your devices in
 the centralized database, then execute a query against that database. Otherwise you will be forced to connect to the all of
 your devices using the LWM2M protocol and ask each device to provide its firmware version number. Asking millions of
@@ -1085,7 +1537,7 @@ expensive the gateway device is, the less affordable your IoT solution becomes f
 reason why would you like to have a proper tool for measuring the given IoT messages flow scenario in the unified way,
 on multiple devices.
 
-Camel IoT Labs comes with the *Performance testing framework* that can be used to define the hardware profile and
+Rhiot project comes with the *Performance testing framework* that can be used to define the hardware profile and
 test scenarios. Performance framework takes care of detecting the devices connected to your local network, deploying the
 test application into these, executing the actual tests and generating the results as the human-readable chart.
 For example the sample output for the MQTT QOS testing could generate the following diagram:
@@ -1180,6 +1632,57 @@ The key principles behind the steroids are:
 * promote [Kubernetes-like service discovery](https://github.com/kubernetes/kubernetes/blob/master/docs/user-guide/services.md)
 * promote loading reloadable resources from the external sources (like files and databases)
 
+### Reading application properties
+
+Almost all components of Rhiot uses the `io.rhiot.utils.Properties` class to read the application properties. That
+properties utility can be used to resolve the value of the given application property. For example:
+
+    String property = Properties.stringProperty("myProperty");
+    String property = Properties.stringProperty("myProperty", "defaultValue");
+
+`Properties` provides methods not only for the String properties, but also for the primitive data types. For example:
+
+    Integer timeout = Properties.intProperty("timeout");
+    int timeout = Properties.intProperty("timeout", 1000);
+
+The `Properties` tries to resolve the property value from the following locations (and in this order):
+* ThreadLocal map 
+* JVM system properties
+* environment variables
+* `application.properties` file located in the classpath
+
+
+### Steroids bootstrap
+
+Steroids Bootstrap is a small engine that can be used to scan the classpath and automatically load steroids modules.
+Bootstrap provides opinionated *convention over configuration* runtime simplifying the wiring between common components
+used in Rhiot-based applications.
+
+In order to start using bootstrap, add the following Maven dependency to your project:
+
+    <dependency>
+        <groupId>io.rhiot</groupId>
+        <artifactId>rhiot-steroids</artifactId>
+        <version>${rhiot.version}</version>
+    </dependency>
+
+Avaliable for rhiot.version >= 0.1.2
+
+
+And then add the following code to your project:
+
+    import io.rhiot.steroids.bootstrap.Bootstrap;
+    ...
+    Bootstrap bootstrap = new Bootstrap().start();
+    ... // Do your stuff
+    bootstrap.stop();
+
+You can also use our main class (which is particularly useful when working with the fat jars):
+
+    import io.rhiot.steroids.bootstrap.Bootstrap;
+    ...
+    Bootstrap.main();
+
 ### Injecting MongoDB client
 
 Steroids come with the MongoDB module that can be used to simplify access to the MongoDB database. In order to take the
@@ -1188,8 +1691,10 @@ advantage from it, import the `rhiot-mongodb` module into your project:
     <dependency>
         <groupId>io.rhiot</groupId>
         <artifactId>rhiot-mongodb</artifactId>
-        <version>0.1.1</version>
+        <version>${rhiot.version}</version>
     </dependency>
+
+Avaliable for rhiot.version >= 0.1.1
 
 In order to inject the MongoDb client into your code, use the `Mongos.discoverMongo()` method:
 
@@ -1215,6 +1720,71 @@ solution. Quickstarts are hosted at GitHub ([rhiot/quickstarts](https://github.c
 downloaded using the following shell command:
 
     git clone git@github.com:rhiot/quickstarts.git
+
+### AMQP cloudlet quickstart
+
+The AMQP cloudlet quickstart can be used as a base for the fat-jar AMQP microservices. If you wanna create a simple
+backend application capable of exposing AMQP-endpoint and handling the AMQP-based communication, the AMQT cloudlet
+quickstart is the best way to start your development efforts.
+
+#### Creating and running the AMQP cloudlet project
+
+In order to create the AMQP cloudlet project execute the following commands:
+
+    git clone git@github.com:rhiot/quickstarts.git
+    cp -r quickstarts/cloudlets/amqp amqp
+    cd amqp
+    mvn install
+
+To start the AMQP cloudlet execute the following command:
+
+    java -jar target/rhiot-cloudlets-amqp-1.0.0-SNAPSHOT.jar
+
+You can also build and run it as a Docker image (we love Docker and highly recommend this approach):
+
+    TARGET_IMAGE=yourUsername/rhiot-cloudlets-amqp
+    mvn install docker:build docker:push -Ddocker.image.target=${TARGET_IMAGE}
+    docker run -it ${TARGET_IMAGE}
+
+#### AMQP broker
+
+By default AMQP cloudlet quickstart starts embedded [ActiveMQ](http://activemq.apache.org) AMQP broker (on
+5672 port). If you would like to connect your cloudlet application to the external ActiveMQ broker (instead of starting
+the embedded one), run the cloudlet with the `BROKER_URL` environment variable or system property, for example:
+
+    java -DBROKER_URL=tcp://amqbroker.example.com:61616 -jar target/rhiot-cloudlets-amqp-1.0.0-SNAPSHOT.jar
+
+...or...
+
+    docker run -e BROKER_URL=tcp://amqbroker.example.com:61616 -it yourUsername/rhiot-cloudlets-amqp
+
+#### Sample chat application
+
+The AMQP cloudlet quickstart is in fact a simple chat application. Clients can send the messages to the chat channel
+by subscribing to the broker and sending the messages to the `chat` AMQP queue.
+
+The clients can subscribe to the chat updates
+by listening on the `chat-updates` AMQP topic - whenever the new message has been sent to the chat channel, the clients registered
+to the `chat-updates` will receive the updated chat history.
+
+The quickstart also exposes the simple REST API that can be used to read the chat history using the HTTP `GET` request:
+
+    $ curl http://localhost:8180/chat
+    Hello, this is the IoT device!
+    I just wanted to say hello!
+    Hello, IoT device. Nice to meet you!
+
+#### Architectural overview
+
+When AMQP cloudlet is started with the embedded ActiveMQ broker, the architecture of the example is the following:
+
+<img src="images/quickstarts_cloudlet_amqp_embedded.png" height="400" hspace="30">
+
+When you connect to the external ActiveMQ broker (using `BROKER_URL` option), the architecture of the example becomes
+more like the following diagram:
+
+<img src="images/quickstarts_cloudlet_amqp_external.png" height="800" hspace="30">
+
 
 ### MQTT cloudlet quickstart
 
@@ -1254,7 +1824,14 @@ the embedded one), run the cloudlet with the `BROKER_URL` environment variable o
 #### Sample chat application
 
 The MQTT cloudlet quickstart is in fact a simple chat application. Clients can send the messages to the chat channel
-by subscribing to the broker and sending the messages to the `chat` MQTT topic. The clients can subscribe to the chat updates
+by subscribing to the broker and sending the messages to the `chat` MQTT topic. To send some messages to the chat you
+can use the standalone [MQTT.js](https://www.npmjs.com/package/mqtt) client:
+
+    mqtt pub -t 'chat' -h 'localhost' -m 'Hello, this is the IoT device!'
+    mqtt pub -t 'chat' -h 'localhost' -m 'I just wanted to say hello!'
+    mqtt pub -t 'chat' -h 'localhost' -m 'Hello, IoT device. Nice to meet you!'
+
+The clients can subscribe to the chat updates
 by listening on the `chat-updates` MQTT topic - whenever the new message has been sent to the chat, the clients registered
 to the `chat-updates` will receive the updated chat history.
 
@@ -1284,8 +1861,9 @@ Here is the bunch of useful resources regarding Camel IoT project:
 - [IoT gateway dream team - Eclipse Kura and Apache Camel](https://www.youtube.com/watch?v=mli5c-oTN1U) - video from the Henryk Konsek talk for Eclipse IoT Virtual Meetup (2015)
 - [Apache Camel & RaspberryPi PoC w/ GPIO & LED & Button](http://gautric.github.io/blog/2015/04/03/apache-camel-raspberrypi-integration.html) - Greg's blog post (video included) (April 2015) 
 - [Using Camel & Tinkerforge in Jboss Fuse](https://www.youtube.com/watch?v=J1hN9NLLbro) - Interview with Geert, includes live demo of Camel loadbalancer via RGB Led Strip (October 2014)
-- [Camel IoT Labs i2c gpio mqtt lcd](http://gautric.github.io/blog/2015/05/20/camel-iot-labs-i2c-gpio-mqtt-lcd.html) - Greg's blog post (video included) (may 2015)
+- [Rhiot (ex-Camel IoT Labs) i2c gpio mqtt lcd](http://gautric.github.io/blog/2015/05/20/camel-iot-labs-i2c-gpio-mqtt-lcd.html) - Greg's blog post (video included) (may 2015)
 - [Running Camel-Tinkerforge on Karaf](https://geertschuring.wordpress.com/2015/05/25/running-camel-tinkerforge-on-karaf/) - Blogpost describing how to install and run camel-tinkerforge on Karaf. Geerts blog (may 2015)
 - [Over-the-Air Runtime Updates of the IoT Gateways](http://java.dzone.com/articles/over-air-runtime-updates-iot) - DZone article by Henryk Konsek (2015)
 - [Where Am I? Collecting GPS Data With Apache Camel](https://dzone.com/articles/where-am-i-collecting-gps-data-with-apache-camel) - DZone article by Henryk Konsek (2015)
 - [Let's start the Rhiot](http://henryk-konsek.blogspot.com/2015/07/lets-start-rhiot.html) - blog post by Henryk Konsek (2015)
+- [Howto use your MacOS webcam w/ Rhiot project and groovy] (http://gautric.github.io/blog/2015/10/22/rhiot-0.1.2-camel-webcam-macos-x.html) - Greg's blog post (image included) (oct 2015)

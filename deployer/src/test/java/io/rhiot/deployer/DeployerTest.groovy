@@ -16,26 +16,58 @@
  */
 package io.rhiot.deployer
 
+import io.rhiot.deployer.detector.DeviceDetector
 import org.junit.Assert
 import org.junit.Test
 
+import static com.google.common.truth.Truth.assertThat
 import static org.mockito.Mockito.mock
 
 class DeployerTest extends Assert {
 
     def deviceDetector = mock(DeviceDetector.class)
 
-    def deployer = new Deployer(deviceDetector, true)
+    def deployer = new DeployerBuilder().deviceDetector(deviceDetector).debug(true).build()
 
     @Test
     void shouldDetectNoSupportedDevices() {
         try {
             deployer.deploy()
         } catch (ConsoleInformation info) {
+            assertThat(info.message).contains('No supported devices detected')
+            return
+        }
+        fail()
+    }
+
+    @Test
+    void shouldUseUsernameAndPassword() {
+        try {
+            def parser = new ConsoleInputParser('--username=foo', '--password=bar')
+            Deployer.deployGateway(parser)
+        } catch (ConsoleInformation info) {
             assertTrue(info.message.contains('No supported devices detected'))
             return
         }
         fail()
+    }
+
+    @Test
+    void shouldDetectUsernameWithoutPassword() {
+        try {
+            def parser = new ConsoleInputParser('--username=foo')
+            Deployer.deployGateway(parser)
+        } catch (ConsoleInformation info) {
+            assertThat(info.message).contains('Both username and password must be specified')
+            return
+        }
+        fail()
+    }
+
+    @Test
+    void shouldDownloadGivenGatewayArtifact() {
+        def artifact =  deployer.gatewayArtifact(Optional.of('io.rhiot:rhiot-gateway-app:0.1.3-SNAPSHOT')).get()
+        assertThat(artifact.available()).isGreaterThan(0)
     }
 
 }

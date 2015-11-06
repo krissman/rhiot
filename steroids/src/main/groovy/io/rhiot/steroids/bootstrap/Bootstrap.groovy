@@ -22,26 +22,52 @@ import static io.rhiot.steroids.Steroids.beans
 import static java.lang.Runtime.runtime;
 
 /**
- * Starts up Steroids framework, scans the classpath for the initializers and run the latter.
+ * Starts up Steroids framework, scans the classpath for the initializers and runs the latter.
  */
 class Bootstrap implements WithLogger {
 
     // Members
 
+    private final BeanRegistry beanRegistry
+
     private final def initializers = beans(BootInitializer.class).
             sort{ first, second -> first.order() - second.order()}.asImmutable()
+
+    // Constructors
+
+    Bootstrap(BeanRegistry beanRegistry) {
+        this.beanRegistry = beanRegistry
+    }
+
+    Bootstrap() {
+        this(new ScanningMapBeanRegistry())
+    }
 
     // Lifecycle
 
     Bootstrap start() {
         log().debug('Starting Steroids Bootstrap: {}', getClass().name)
+        initializers.each {
+            if(it instanceof BootstrapAware) {
+                it.bootstrap(this)
+            }
+        }
         initializers.each { it.start() }
         this
     }
 
     Bootstrap stop() {
+        log().debug('Stopping Steroids Bootstrap: {}', getClass().name)
         initializers.reverse().each { it.stop() }
         this
+    }
+
+    BeanRegistry beanRegistry() {
+        beanRegistry
+    }
+
+    def <T extends BootInitializer> T initializer(Class<T> type) {
+        initializers.find { type.isAssignableFrom(it.class) }
     }
 
     // Main entry point

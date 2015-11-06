@@ -17,14 +17,32 @@
 package io.rhiot.utils
 
 import groovy.transform.CompileStatic
-
-import javax.swing.text.html.Option
+import java.lang.ThreadLocal as JThreadLocal
+import java.util.Properties as JProperties
 
 import static java.lang.System.getenv
-import static java.lang.System.setProperty
 
 @CompileStatic
 final class Properties {
+
+    // Members
+
+    private static final JProperties applicationPropertiesFile = new JProperties()
+	private static final JThreadLocal threadLocalProperties = new ThreadLocal<JProperties>()
+	
+    private static JProperties propertiesSnapshot
+    static {
+        saveSystemProperties()
+    }
+
+    static {
+        def propertiesStream = Properties.class.getResourceAsStream('/application.properties')
+        if(propertiesStream != null) {
+            applicationPropertiesFile.load(propertiesStream)
+        }
+    }
+
+    // Constructors
 
     private Properties() {
     }
@@ -36,17 +54,23 @@ final class Properties {
     // String properties
 
     static String stringProperty(String key, String defaultValue) {
-        def property = System.getProperty(key)
+		// lookup the thread local
+		def property = threadStringProperty(key)
+		if (property != null) {
+			return property
+		}
+		// lookup the java system properties
+        property = System.getProperty(key)
         if (property != null) {
             return property
         }
-
+		// lookup the OS system variables
         property = getenv(key)
         if (property != null) {
             return property
         }
-
-        return defaultValue
+		// lookup the file properties
+        applicationPropertiesFile.getProperty(key, defaultValue)
     }
 
     static String stringProperty(String key) {
@@ -104,5 +128,47 @@ final class Properties {
     static void setBooleanProperty(String key, boolean value) {
         System.setProperty(key, "${value}")
     }
+	
+	// Import/export
+
+    static void saveSystemProperties() {
+        propertiesSnapshot = new JProperties()
+        propertiesSnapshot.putAll(System.getProperties())
+    }
+
+    static void restoreSystemProperties() {
+        System.setProperties(propertiesSnapshot)
+    }
+
+	// ThreadLocal properties
+	
+	static JProperties getThreadLocalJProperties() {
+		def prop = threadLocalProperties.get();
+		
+		prop == null ? threadLocalProperties.set(new JProperties()) : void ;
+		
+		threadLocalProperties.get();
+	}
+	
+	static String setThreadStringProperty(String key, String value) {
+		getThreadLocalJProperties().put(key,value);
+		threadStringProperty(key)
+	}
+	
+	static String threadStringProperty(String key) {
+		getThreadLocalJProperties().get(key);
+	}
+	
+	static int setThreadIntProperty(String key, int value) {
+		setThreadStringProperty(key,"${value}").toInteger();
+	}
+		
+	static boolean setThreadBooleanProperty(String key, boolean value) {
+		setThreadStringProperty(key,"${value}").toBoolean();
+	}
+	
+	static long setThreadLongProperty(String key, long value) {
+		setThreadStringProperty(key,"${value}").toLong();
+	}
 
 }

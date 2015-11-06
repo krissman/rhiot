@@ -5,7 +5,8 @@
 
     <groupId>io.rhiot</groupId>
     <artifactId>rhiot</artifactId>
-    <version>0.1.2-SNAPSHOT</version>
+    <version>0.1.3-SNAPSHOT</version>
+    <name>RHIOT (rhiot.io)</name>
     <packaging>pom</packaging>
 
     <modules>
@@ -16,7 +17,11 @@
         <module>steroids</module>
         <module>steroids-activemq</module>
         <module>steroids-camel</module>
+        <module>steroids-spark</module>
+        <module>steroids-vertx</module>
+        <module>datastream</module>
         <module>vertx</module>
+        <module>components</module>
         <module>gateway</module>
         <module>gateway-app</module>
         <module>cloudlets</module>
@@ -39,9 +44,10 @@
         <groovy-eclipse-compiler.version>2.9.1-01</groovy-eclipse-compiler.version>
         <plexus-compiler-api.version>2.4</plexus-compiler-api.version>
 
-        <spring-boot.version>1.2.5.RELEASE</spring-boot.version>
+        <spring-boot.version>1.2.7.RELEASE</spring-boot.version>
 
-        <docker-maven-plugin.version>0.12.0</docker-maven-plugin.version>
+        <apache-rat-plugin.version>0.11</apache-rat-plugin.version>
+        <docker-maven-plugin.version>0.13.5</docker-maven-plugin.version>
         <groovydoc-maven-plugin.version>1.3</groovydoc-maven-plugin.version>
         <nexus-staging-maven-plugin.version>1.6.5</nexus-staging-maven-plugin.version>
         <maven-compiler-plugin.version>3.3</maven-compiler-plugin.version>
@@ -50,13 +56,13 @@
         <maven-gpg-plugin.version>1.5</maven-gpg-plugin.version>
         <maven-javadoc-plugin.version>2.10.3</maven-javadoc-plugin.version>
         <maven-release-plugin.version>2.5.2</maven-release-plugin.version>
-        <maven-shade-plugin.version>2.3</maven-shade-plugin.version>
+        <maven-shade-plugin.version>2.4.1</maven-shade-plugin.version>
         <maven-surefire-plugin.version>2.18.1</maven-surefire-plugin.version>
         <maven-source-plugin.version>2.4</maven-source-plugin.version>
         <maven-war-plugin.version>2.6</maven-war-plugin.version>
+        <depends-maven-plugin.version>1.3</depends-maven-plugin.version>
     </properties>
 
-    <name>${project.artifactId}</name>
     <description>Rhiot Project</description>
     <url>http://rhiot.io</url>
 
@@ -132,12 +138,6 @@
                 </configuration>
             </plugin>
             <plugin>
-                <groupId>org.codehaus.groovy</groupId>
-                <artifactId>groovy-eclipse-compiler</artifactId>
-                <version>${groovy-eclipse-compiler.version}</version>
-                <extensions>true</extensions>
-            </plugin>
-            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
                 <version>${maven-enforcer-plugin.version}</version>
@@ -192,6 +192,12 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.groovy</groupId>
+                <artifactId>groovy-eclipse-compiler</artifactId>
+                <version>${groovy-eclipse-compiler.version}</version>
+                <extensions>true</extensions>
             </plugin>
             <plugin>
                 <groupId>org.sonatype.plugins</groupId>
@@ -270,7 +276,7 @@
                 <plugin>
                     <groupId>org.apache.rat</groupId>
                     <artifactId>apache-rat-plugin</artifactId>
-                    <version>0.11</version>
+                    <version>${apache-rat-plugin.version}</version>
                     <configuration>
                         <licenses>
                             <license implementation="org.apache.rat.analysis.license.SimplePatternBasedLicense">
@@ -300,19 +306,23 @@
                             <exclude>soapui-errors.log</exclude>
                             <exclude>.travis.yml</exclude>
                             <exclude>travis.sh</exclude>
-                            <!-- Hawt.io plugins -->
-                            <exclude>**/bower.json</exclude>
-                            <exclude>**/package.json</exclude>
-                            <exclude>**/plugins/includes.js</exclude>
-                            <exclude>**/plugins/includes.js.map</exclude>
-                            <exclude>**/ts/*.js</exclude>
-                            <exclude>**/ts/*.js.map</exclude>
-                            <exclude>**/test-plugins/**/*.js</exclude>
-                            <exclude>**/test-plugins/**/*.js.map</exclude>
                             <exclude>**/coordinates.txt</exclude>
                             <exclude>**/security.data</exclude>
                         </excludes>
                     </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.servicemix.tooling</groupId>
+                    <artifactId>depends-maven-plugin</artifactId>
+                    <version>${depends-maven-plugin.version}</version>
+                    <executions>
+                        <execution>
+                            <id>generate-depends-file</id>
+                            <goals>
+                                <goal>generate-depends-file</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                 </plugin>
                 <plugin>
                     <groupId>org.jolokia</groupId>
@@ -323,7 +333,7 @@
                             <image>
                                 <name>rhiot/${docker.image.target}</name>
                                 <build>
-                                    <from>rhiot/fatjar:0.1.1-SNAPSHOT</from>
+                                    <from>rhiot/fatjar:0.1.2-SNAPSHOT</from>
                                     <tags>
                                         <tag>latest</tag>
                                         <tag>${project.version}</tag>

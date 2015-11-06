@@ -16,9 +16,6 @@
  */
 package com.github.camellabs.iot.cloudlet.geofencing.service;
 
-import com.github.camellabs.iot.cloudlet.document.driver.spi.DocumentDriver;
-import com.github.camellabs.iot.cloudlet.document.driver.spi.FindByQueryOperation;
-import com.github.camellabs.iot.cloudlet.document.driver.spi.SaveOperation;
 import com.github.camellabs.iot.cloudlet.geofencing.domain.GpsCoordinates;
 import com.github.camellabs.iot.cloudlet.geofencing.domain.Route;
 import com.github.camellabs.iot.cloudlet.geofencing.domain.RouteComment;
@@ -27,6 +24,7 @@ import com.github.camellabs.iot.cloudlet.geofencing.googlemaps.StaticMaps;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.maps.model.LatLng;
+import io.rhiot.datastream.document.DocumentStore;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -44,16 +42,17 @@ import org.springframework.stereotype.Component;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URL;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static com.github.camellabs.iot.cloudlet.document.driver.spi.Pojos.collectionName;
 import static com.github.camellabs.iot.cloudlet.geofencing.domain.Route.createNewRoute;
 import static com.google.common.collect.Lists.newLinkedList;
 import static com.google.common.collect.Maps.newHashMap;
+import static io.rhiot.datastream.document.FindByQueryOperation.findByQueryOperation;
+import static io.rhiot.datastream.document.Pojos.collectionName;
+import static io.rhiot.datastream.document.Pojos.pojoToMap;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
@@ -67,14 +66,14 @@ public class DefaultRouteService implements RouteService {
 
     private static final Logger LOG = LoggerFactory.getLogger(DefaultRouteService.class);
 
-    private final DocumentDriver documentDriver;
+    private final DocumentStore documentDriver;
 
     private final MongoTemplate mongoTemplate;
 
     private final int routeAnalysisBatchSize;
 
     @Autowired
-    public DefaultRouteService(DocumentDriver documentDriver, MongoTemplate mongoTemplate,
+    public DefaultRouteService(DocumentStore documentDriver, MongoTemplate mongoTemplate,
                                @Value("${camel.labs.iot.cloudlet.geofencing.routeAnalysis.batch.size:20}") int routeAnalysisBatchSize) {
         this.documentDriver = documentDriver;
         this.mongoTemplate = mongoTemplate;
@@ -105,7 +104,7 @@ public class DefaultRouteService implements RouteService {
             String routeId;
             if (lastCoordinates == null || (TimeUnit.MILLISECONDS.toMinutes(coordinates.getTimestamp().getTime() - lastCoordinates.getTimestamp().getTime()) > 5)) {
                 Route newRoute = createNewRoute(client);
-                routeId = documentDriver.save(new SaveOperation(newRoute));
+                routeId = documentDriver.save(collectionName(newRoute.getClass()), pojoToMap(newRoute));
             } else {
                 routeId = lastRouteCoordinates.getRouteId();
             }
@@ -130,9 +129,9 @@ public class DefaultRouteService implements RouteService {
     @Override
     public void deleteRoute(String routeId) {
         Map<String, Object> queryBuilder = ImmutableMap.of("query", ImmutableMap.of("_idIn", singletonList(new ObjectId(routeId))));
-        Map<String,Object> route = documentDriver.findByQuery(new FindByQueryOperation(Route.class, queryBuilder)).get(0);
+        Map<String,Object> route = documentDriver.findByQuery(findByQueryOperation(Route.class, queryBuilder)).get(0);
         route.put("deleted", new Date());
-        documentDriver.save(new SaveOperation(collectionName(Route.class), route));
+        documentDriver.save(collectionName(Route.class), route);
     }
 
     @Override

@@ -16,6 +16,8 @@
  */
 package com.github.camellabs.iot.cloudlet.document.sdk;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.camellabs.iot.cloudlet.sdk.HealthCheck;
 import com.github.camellabs.iot.cloudlet.sdk.ServiceDiscoveryException;
 import com.google.common.annotations.VisibleForTesting;
@@ -24,7 +26,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestOperations;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import static com.github.camellabs.iot.cloudlet.sdk.Discoveries.discoverServiceUrl;
 import static com.github.camellabs.iot.cloudlet.sdk.RestTemplates.defaultRestTemplate;
@@ -92,25 +96,52 @@ public class RestDocumentService<T> implements DocumentService<T> {
 
     @Override
     public T save(T document) {
-        String id = restClient.postForObject(format("%s/save/%s", baseUrl, pojoClassToCollection(document.getClass())), document, String.class);
-        writeField(document, "id", id);
-        return document;
+        try {
+            String response = restClient.postForObject(format("%s/save/%s", baseUrl, pojoClassToCollection(document.getClass())), document, String.class);
+            Map responseMap = new ObjectMapper().readValue(response, Map.class);
+            writeField(document, "id", responseMap.get("result"));
+            return document;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
     public T findOne(Class<T> documentClass, String id) {
-        return restClient.getForObject(format("%s/findOne/%s/%s", baseUrl, pojoClassToCollection(documentClass), id), documentClass);
+        ObjectMapper mapper  = new ObjectMapper();
+        mapper.setVisibilityChecker(mapper.getSerializationConfig().getDefaultVisibilityChecker()
+                .withFieldVisibility(JsonAutoDetect.Visibility.ANY));
+        try {
+            String response = restClient.getForObject(format("%s/findOne/%s/%s", baseUrl, pojoClassToCollection(documentClass), id), String.class);
+            return mapper.readValue(response, documentClass);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
     public List<T> findMany(Class<T> documentClass, String... ids) {
-        T[] results = restClient.postForObject(format("%s/findMany/%s", baseUrl, pojoClassToCollection(documentClass)), new Ids(ids), classOfArrayOfClass(documentClass));
-        return ImmutableList.copyOf(results);
+        ObjectMapper mapper  = new ObjectMapper();
+        mapper.setVisibilityChecker(mapper.getSerializationConfig().getDefaultVisibilityChecker()
+                .withFieldVisibility(JsonAutoDetect.Visibility.ANY));
+        try {
+            String response = restClient.postForObject(format("%s/findMany/%s", baseUrl, pojoClassToCollection(documentClass)), new Ids(ids), String.class);
+            T[] arrayResponse =  mapper.readValue(response, classOfArrayOfClass(documentClass));
+            return ImmutableList.copyOf(arrayResponse);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
     public long count(Class<?> documentClass) {
-        return restClient.getForObject(format("%s/count/%s", baseUrl, pojoClassToCollection(documentClass)), Long.class);
+        try {
+            String response = restClient.getForObject(format("%s/count/%s", baseUrl, pojoClassToCollection(documentClass)), String.class);
+            Map responseMap = new ObjectMapper().readValue(response, Map.class);
+            return (int) responseMap.get("result");
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override

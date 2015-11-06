@@ -16,8 +16,6 @@
  */
 package com.github.camellabs.iot.cloudlet.document.driver;
 
-import boot.mongo.MongoDbEndpoint;
-import boot.mongo.MongoDbMvcEndpoint;
 import com.mongodb.Mongo;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoTimeoutException;
@@ -26,6 +24,12 @@ import de.flapdoodle.embed.mongo.MongodStarter;
 import de.flapdoodle.embed.mongo.config.IMongodConfig;
 import de.flapdoodle.embed.mongo.config.MongodConfigBuilder;
 import de.flapdoodle.embed.mongo.config.Net;
+import io.rhiot.datastream.document.mongodb.MongodbDocumentStore;
+import io.rhiot.datastream.engine.DataStream;
+import io.rhiot.steroids.camel.CamelBootInitializer;
+import org.apache.camel.CamelContext;
+import org.apache.camel.impl.SimpleRegistry;
+import org.apache.camel.spring.boot.CamelContextConfiguration;
 import org.apache.camel.spring.boot.FatJarRouter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +37,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
-import org.springframework.data.mongodb.core.MongoTemplate;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -67,6 +70,33 @@ public class DriverDocumentCloudlet extends FatJarRouter {
         return MongodStarter.getDefaultInstance().prepare(mongodConfig);
     }
 
+    @Bean(initMethod = "start", destroyMethod = "stop")
+    DataStream dataStream() {
+        return new DataStream();
+    }
+
+//    @Bean
+//    MongodbDocumentStore mongodbDocumentStore(DataStream dataStream) {
+//        return dataStream.beanRegistry().bean(MongodbDocumentStore.class).get();
+//    }
+
+    @Bean
+    CamelContextConfiguration camelContextConfiguration(DataStream dataStream, Mongo mongo, @Value("${cloudlet.document.driver.mongodb.db}") String documentsDbName) {
+        MongodbDocumentStore mongodbDocumentStore = dataStream.beanRegistry().bean(MongodbDocumentStore.class).get();
+
+        ((SimpleRegistry) CamelBootInitializer.registry()).put("mongodbDocumentStore", mongodbDocumentStore);
+
+        return new CamelContextConfiguration() {
+            @Override
+            public void beforeApplicationStart(CamelContext camelContext) {
+//                Vertx vertx = dataStream.beanRegistry().bean(Vertx.class).get();
+//                VertxComponent vertxComponent = new VertxComponent();
+//                vertxComponent.setVertx(vertx);
+//                camelContext.addComponent("vertx", vertxComponent);
+            }
+        };
+    }
+
     @Bean
     @ConditionalOnProperty(value = "camel.labs.iot.cloudlet.document.driver.mongodb.springbootconfig", matchIfMissing = true, havingValue = "false")
     Mongo mongo() throws UnknownHostException {
@@ -89,16 +119,6 @@ public class DriverDocumentCloudlet extends FatJarRouter {
             LOG.info("Can't connect to the MongoDB server at mongodb:27017. Falling back to the localhost:27017.");
             return new MongoClient();
         }
-    }
-
-    @Bean
-    MongoDbEndpoint mongoDbEndpoint(MongoTemplate mongoTemplate) {
-        return new MongoDbEndpoint(mongoTemplate);
-    }
-
-    @Bean
-    MongoDbMvcEndpoint mongoDbMvcEndpoint(MongoDbEndpoint mongoDbEndpoint) {
-        return new MongoDbMvcEndpoint(mongoDbEndpoint);
     }
 
     @Bean

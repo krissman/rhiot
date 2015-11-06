@@ -16,20 +16,22 @@
  */
 package io.rhiot.utils;
 
-import com.github.camellabs.iot.utils.Maps;
 import org.apache.commons.lang3.reflect.FieldUtils;
-import org.apache.commons.lang3.reflect.MethodUtils;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Date;
 import java.util.Map;
 
 import static java.lang.Character.toLowerCase;
 import static java.lang.String.format;
 import static org.apache.commons.lang3.reflect.FieldUtils.getField;
 
+/**
+ * Utilities related to the Java Reflection API.
+ */
 public final class Reflections {
 
     private Reflections() {
@@ -94,6 +96,14 @@ public final class Reflections {
     public static String classNameToCamelCase(Class<?> clazz) {
         String simpleName = clazz.getSimpleName();
         return toLowerCase(simpleName.charAt(0)) + simpleName.substring(1);
+    }
+
+    public static boolean isNumber(Class<?> type) {
+        return wrapperClasses.containsKey(type) || wrapperClasses.containsValue(type);
+    }
+
+    public static boolean isJavaLibraryType(Class<?> type) {
+        return isNumber(type) || type == String.class || type == Date.class;
     }
 
 }
