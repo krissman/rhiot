@@ -24,7 +24,7 @@ import com.github.camellabs.iot.cloudlet.geofencing.googlemaps.StaticMaps;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.maps.model.LatLng;
-import io.rhiot.datastream.document.DocumentStore;
+import io.rhiot.cloudplatform.service.document.api.DocumentStore;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -37,7 +37,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -50,9 +49,8 @@ import java.util.concurrent.TimeUnit;
 import static com.github.camellabs.iot.cloudlet.geofencing.domain.Route.createNewRoute;
 import static com.google.common.collect.Lists.newLinkedList;
 import static com.google.common.collect.Maps.newHashMap;
-import static io.rhiot.datastream.document.FindByQueryOperation.findByQueryOperation;
-import static io.rhiot.datastream.document.Pojos.collectionName;
-import static io.rhiot.datastream.document.Pojos.pojoToMap;
+import static io.rhiot.cloudplatform.service.document.api.Pojos.collectionName;
+import static io.rhiot.cloudplatform.service.document.api.Pojos.pojoToMap;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
@@ -61,7 +59,6 @@ import static org.springframework.data.domain.Sort.Direction.DESC;
 import static org.springframework.data.mongodb.core.query.Criteria.where;
 import static org.springframework.util.Assert.isTrue;
 
-@Component("routeService")
 public class DefaultRouteService implements RouteService {
 
     private static final Logger LOG = LoggerFactory.getLogger(DefaultRouteService.class);
@@ -129,7 +126,7 @@ public class DefaultRouteService implements RouteService {
     @Override
     public void deleteRoute(String routeId) {
         Map<String, Object> queryBuilder = ImmutableMap.of("query", ImmutableMap.of("_idIn", singletonList(new ObjectId(routeId))));
-        Map<String,Object> route = documentDriver.findByQuery(findByQueryOperation(Route.class, queryBuilder)).get(0);
+        Map<String,Object> route = documentDriver.findByQuery(Route.class.getName(), queryBuilder).get(0);
         route.put("deleted", new Date());
         documentDriver.save(collectionName(Route.class), route);
     }

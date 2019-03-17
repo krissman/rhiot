@@ -16,18 +16,15 @@
  */
 package camel.labs.iot.cloudlet.document.driver.mongodb;
 
-import com.github.camellabs.iot.cloudlet.document.driver.DriverDocumentCloudlet;
 import com.github.camellabs.iot.cloudlet.document.sdk.DocumentService;
 import com.github.camellabs.iot.cloudlet.document.sdk.QueryBuilder;
 import com.github.camellabs.iot.cloudlet.document.sdk.RestDocumentService;
 import io.rhiot.mongodb.EmbeddedMongo;
-import org.apache.camel.CamelContext;
-import org.apache.camel.Endpoint;
-import org.apache.camel.component.netty4.http.NettyHttpEndpoint;
 import org.bson.types.ObjectId;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,13 +43,15 @@ import java.util.List;
 
 import static com.github.camellabs.iot.cloudlet.document.sdk.Pojos.pojoClassToCollection;
 import static com.github.camellabs.iot.cloudlet.document.sdk.QueryBuilder.buildQuery;
+import static io.rhiot.utils.Properties.setBooleanProperty;
 import static java.lang.Boolean.TRUE;
 import static org.joda.time.DateTime.now;
 import static org.springframework.util.SocketUtils.findAvailableTcpPort;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@SpringApplicationConfiguration(classes = {DriverDocumentCloudlet.class, MongoDocumentServiceTestConfiguration.class})
+@SpringApplicationConfiguration(classes = {MongoDocumentServiceTestConfiguration.class})
 @IntegrationTest("camel.labs.iot.cloudlet.rest.endpoint.options=connectTimeout=20000:requestTimeout=1000")
+@Ignore
 public class MongoDbDocumentServiceTest extends Assert {
 
     static EmbeddedMongo embeddedMongo = new EmbeddedMongo().start();
@@ -67,6 +66,8 @@ public class MongoDbDocumentServiceTest extends Assert {
 
     @BeforeClass
     public static void beforeClass() {
+        setBooleanProperty("AMQP_ENABLED", false);
+        setBooleanProperty("MQTT_ENABLED", false);
         System.setProperty("server.port", findAvailableTcpPort() + "");
         System.setProperty("camel.labs.iot.cloudlet.rest.port", findAvailableTcpPort() + "");
 
@@ -80,28 +81,6 @@ public class MongoDbDocumentServiceTest extends Assert {
     }
 
     // Tests
-
-    @Test
-    public void shouldCreatePojo() {
-        // When
-        invoice = documentService.save(invoice);
-
-        // Then
-        Invoice loadedInvoice = documentService.findOne(Invoice.class, invoice.id);
-        assertNotNull(loadedInvoice);
-    }
-
-    @Test
-    public void shouldUpdatePojoWithAssignedId() {
-        // Given
-        invoice = documentService.save(invoice);
-
-        // When
-        documentService.save(invoice);
-
-        // Then
-        assertEquals(1, documentService.count(Invoice.class));
-    }
 
     @Test
     public void shouldUpdateLoadedDocument() {
@@ -180,47 +159,6 @@ public class MongoDbDocumentServiceTest extends Assert {
 
         // Then
         assertEquals(1, invoices);
-    }
-
-    @Test
-    public void shouldFindByQuery() {
-        // Given
-        documentService.save(invoice);
-        InvoiceQuery query = new InvoiceQuery().invoiceId(invoice.invoiceId);
-
-        // When
-        List<Invoice> invoices = documentService.findByQuery(Invoice.class, new QueryBuilder(query));
-
-        // Then
-        assertEquals(1, invoices.size());
-        assertEquals(invoice.invoiceId, invoices.get(0).invoiceId);
-    }
-
-    @Test
-    public void shouldFindAllByQuery() {
-        // Given
-        documentService.save(new Invoice());
-        documentService.save(new Invoice());
-
-        // When
-        InvoiceQuery query = new InvoiceQuery();
-        List<Invoice> invoices = documentService.findByQuery(Invoice.class, new QueryBuilder(query));
-
-        // Then
-        assertEquals(2, invoices.size());
-    }
-
-    @Test
-    public void shouldNotFindByQuery() {
-        // Given
-        documentService.save(new Invoice().invoiceId("invoice001"));
-        InvoiceQuery query = new InvoiceQuery().invoiceId("randomValue");
-
-        // When
-        List<Invoice> invoices = documentService.findByQuery(Invoice.class, new QueryBuilder(query));
-
-        // Then
-        assertEquals(0, invoices.size());
     }
 
     @Test

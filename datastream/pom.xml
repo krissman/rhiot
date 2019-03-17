@@ -5,11 +5,11 @@
 
     <parent>
         <groupId>io.rhiot</groupId>
-        <version>0.1.3-SNAPSHOT</version>
+        <version>0.1.5-SNAPSHOT</version>
         <artifactId>rhiot-bom</artifactId>
         <relativePath>../bom</relativePath>
     </parent>
-    <name>RHIOT :: DataStream</name>
+    <name>Rhiot :: DataStream</name>
     <artifactId>rhiot-datastream</artifactId>
     <packaging>pom</packaging>
 
@@ -21,10 +21,8 @@
     </licenses>
 
     <modules>
-        <module>engine</module>
-        <module>document</module>
-        <module>document-mongodb</module>
-        <module>node</module>
+        <module>components</module>
+        <module>consumer</module>
     </modules>
 
 </project>

@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.rhiot</groupId>
+        <artifactId>rhiot-datastream-components</artifactId>
+        <version>0.1.5-SNAPSHOT</version>
+        <relativePath>..</relativePath>
+    </parent>
+    <name>Rhiot :: DataStream :: Camel components :: OpenIMAJ</name>
+    <artifactId>camel-openimaj</artifactId>
+    <packaging>bundle</packaging>
+    <description>Camel OpenIMAJ Component</description>
+
+    <licenses>
+        <license>
+            <name>The Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
+
+    <properties>
+        <camel.osgi.export.pkg>io.rhiot.component.openimaj</camel.osgi.export.pkg>
+        <camel.osgi.export.service>org.apache.camel.spi.ComponentResolver;component=openimaj</camel.osgi.export.service>
+    </properties>
+
+    <dependencies>
+        
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-core</artifactId>
+        </dependency>
+
+
+        <!-- Open IMAJ - Fat Jar Optimization - Exclude some dependencies we don't use or already include -->
+        <dependency>
+            <groupId>org.openimaj</groupId>
+            <artifactId>core</artifactId>
+            <version>${openimaj.version}</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>javassist</artifactId>
+                    <groupId>javassist</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+       
+        <dependency>
+            <groupId>org.openimaj</groupId>
+            <artifactId>core-image</artifactId>
+            <version>${openimaj.version}</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>core</artifactId>
+                    <groupId>org.openimaj</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>azure-bing-search-java</artifactId>
+                    <groupId>net.billylieurance.azuresearch</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>jeuclid-core</artifactId>
+                    <groupId>net.sourceforge.jeuclid</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>snuggletex-core</artifactId>
+                    <groupId>uk.ac.ed.ph.snuggletex</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>snuggletex-upconversion</artifactId>
+                    <groupId>uk.ac.ed.ph.snuggletex</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>snuggletex-jeuclid</artifactId>
+                    <groupId>uk.ac.ed.ph.snuggletex</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>flickrapi</artifactId>
+                    <groupId>com.aetrion.flickr</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.openimaj</groupId>
+            <artifactId>core-math</artifactId>
+            <version>${openimaj.version}</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>core</artifactId>
+                    <groupId>org.openimaj</groupId>
+                </exclusion>
+                <exclusion>
+                    <groupId>gov.sandia.foundry</groupId>
+                    <artifactId>gov-sandia-cognition-learning-core</artifactId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>gov-sandia-cognition-common-core</artifactId>
+                    <groupId>gov.sandia.foundry</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>xstream</artifactId>
+                    <groupId>com.thoughtworks.xstream</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.openimaj</groupId>
+            <artifactId>faces</artifactId>
+            <version>${openimaj.version}</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>machine-learning</artifactId>
+                    <groupId>org.openimaj</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>video-processing</artifactId>
+                    <groupId>org.openimaj</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>klt-tracker</artifactId>
+                    <groupId>org.openimaj</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>image-feature-extraction</artifactId>
+                    <groupId>org.openimaj</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>image-local-features</artifactId>
+                    <groupId>org.openimaj</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>FaceTracker</artifactId>
+                    <groupId>org.openimaj</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>core-experiment</artifactId>
+                    <groupId>org.openimaj</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>core-image</artifactId>
+                    <groupId>org.openimaj</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>core-math</artifactId>
+                    <groupId>org.openimaj</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>core-video</artifactId>
+                    <groupId>org.openimaj</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>gov-sandia-cognition-common-core</artifactId>
+                    <groupId>gov.sandia.foundry</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- Ends OpenIMAJ -->
+
+
+        <!-- testing -->
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.rhiot</groupId>
+            <artifactId>rhiot-tooling-cmd-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.hamcrest</groupId>
+                    <artifactId>hamcrest-core</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.hamcrest</groupId>
+                    <artifactId>hamcrest-core</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+</project>

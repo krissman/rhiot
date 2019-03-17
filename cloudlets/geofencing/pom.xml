@@ -6,10 +6,10 @@
     <parent>
         <groupId>io.rhiot</groupId>
         <artifactId>rhiot-cloudlets</artifactId>
-        <version>0.1.3-SNAPSHOT</version>
+        <version>0.1.5-SNAPSHOT</version>
         <relativePath>..</relativePath>
     </parent>
-    <name>RHIOT :: Cloudlets :: GeoFencing</name>
+    <name>Rhiot :: Cloudlets :: GeoFencing</name>
     <artifactId>rhiot-cloudlets-geofencing-parent</artifactId>
     <packaging>pom</packaging>
 

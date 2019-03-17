@@ -5,31 +5,26 @@
 
     <groupId>io.rhiot</groupId>
     <artifactId>rhiot</artifactId>
-    <version>0.1.3-SNAPSHOT</version>
-    <name>RHIOT (rhiot.io)</name>
+    <version>0.1.5-SNAPSHOT</version>
+    <name>Rhiot</name>
     <packaging>pom</packaging>
 
     <modules>
         <module>bom</module>
-        <module>utils</module>
-        <module>utils-ssh</module>
+        <module>spring</module>
+        <module>camel</module>
+        <module>dockerfiles</module>
+        <module>cloudplatform</module>
+        <module>lib</module>
         <module>mongodb</module>
-        <module>steroids</module>
-        <module>steroids-activemq</module>
-        <module>steroids-camel</module>
-        <module>steroids-spark</module>
-        <module>steroids-vertx</module>
         <module>datastream</module>
-        <module>vertx</module>
-        <module>components</module>
         <module>gateway</module>
-        <module>gateway-app</module>
         <module>cloudlets</module>
         <module>iot</module>
-        <module>deployer</module>
-        <module>deployer-app</module>
+        <module>tooling</module>
         <module>performance</module>
         <module>feature</module>
+        <module>activemq</module>
     </modules>
 
     <properties>
@@ -39,16 +34,19 @@
 
         <fatjar.mainClass>com.example.DefaultMainClas</fatjar.mainClass>
         <docker.image.target>${project.artifactId}</docker.image.target>
+        <timestamp>${maven.build.timestamp}</timestamp>
+        <maven.build.timestamp.format>yyyy-MM-dd</maven.build.timestamp.format>
 
         <groovy-eclipse-batch.version>2.4.3-01</groovy-eclipse-batch.version>
         <groovy-eclipse-compiler.version>2.9.1-01</groovy-eclipse-compiler.version>
         <plexus-compiler-api.version>2.4</plexus-compiler-api.version>
 
-        <spring-boot.version>1.2.7.RELEASE</spring-boot.version>
+        <spring-boot.version>1.3.2.RELEASE</spring-boot.version>
 
         <apache-rat-plugin.version>0.11</apache-rat-plugin.version>
         <docker-maven-plugin.version>0.13.5</docker-maven-plugin.version>
         <groovydoc-maven-plugin.version>1.3</groovydoc-maven-plugin.version>
+        <karaf-maven-plugin.version>4.0.3</karaf-maven-plugin.version>
         <nexus-staging-maven-plugin.version>1.6.5</nexus-staging-maven-plugin.version>
         <maven-compiler-plugin.version>3.3</maven-compiler-plugin.version>
         <maven-enforcer-plugin.version>1.4</maven-enforcer-plugin.version>
@@ -57,7 +55,7 @@
         <maven-javadoc-plugin.version>2.10.3</maven-javadoc-plugin.version>
         <maven-release-plugin.version>2.5.2</maven-release-plugin.version>
         <maven-shade-plugin.version>2.4.1</maven-shade-plugin.version>
-        <maven-surefire-plugin.version>2.18.1</maven-surefire-plugin.version>
+        <maven-surefire-plugin.version>2.19</maven-surefire-plugin.version>
         <maven-source-plugin.version>2.4</maven-source-plugin.version>
         <maven-war-plugin.version>2.6</maven-war-plugin.version>
         <depends-maven-plugin.version>1.3</depends-maven-plugin.version>
@@ -115,7 +113,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>${maven-compiler-plugin.version}</version>
+                <version>${maven-compiler-plugin.version}</version>                            
                 <dependencies>
                     <dependency>
                         <groupId>org.codehaus.groovy</groupId>
@@ -134,6 +132,7 @@
                     </dependency>
                 </dependencies>
                 <configuration>
+                		<verbose>true</verbose>
                     <compilerId>groovy-eclipse-compiler</compilerId>
                 </configuration>
             </plugin>
@@ -228,6 +227,20 @@
                     </executions>
                 </plugin>
                 <plugin>
+                    <groupId>org.apache.karaf.tooling</groupId>
+                    <artifactId>karaf-maven-plugin</artifactId>
+                    <version>${karaf-maven-plugin.version}</version>
+                    <extensions>true</extensions>
+                    <executions>
+                        <execution>
+                            <phase>prepare-package</phase>
+                            <goals>
+                                <goal>features-generate-descriptor</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-shade-plugin</artifactId>
                     <version>${maven-shade-plugin.version}</version>
@@ -242,6 +255,10 @@
                                 <transformers>
                                     <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                         <mainClass>${fatjar.mainClass}</mainClass>
+                                    </transformer>
+                                    <!-- Transformer below is needed by Akka to work in shaded jars. -->
+                                    <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                        <resource>reference.conf</resource>
                                     </transformer>
                                 </transformers>
                                 <filters>
@@ -299,15 +316,28 @@
                             <!-- ActiveMQ test data -->
                             <exclude>**/activemq-data/**/KahaDB/*.*</exclude>
 
+                            <!-- Excluded test data -->
+                            <exclude>**/cars.json</exclude>
+
+                            <!-- Excluded Spring banner -->
+                            <exclude>**/banner.txt</exclude>
+
                             <exclude>**/Californium.properties</exclude>
                             <exclude>build.out</exclude>
                             <exclude>global-groovy.log</exclude>
                             <exclude>soapui.log</exclude>
                             <exclude>soapui-errors.log</exclude>
-                            <exclude>.travis.yml</exclude>
-                            <exclude>travis.sh</exclude>
                             <exclude>**/coordinates.txt</exclude>
                             <exclude>**/security.data</exclude>
+                            <exclude>**/testingfb/**</exclude>
+
+                            <!-- OpenALPR sources -->
+                            <exclude>**/2.2.0/**</exclude>
+
+                            <!-- Maven wrapper -->
+                            <exclude>.mvn/**</exclude>
+                            <exclude>mvnw</exclude>
+                            <exclude>mvnw.bat</exclude>
                         </excludes>
                     </configuration>
                 </plugin>
@@ -333,10 +363,11 @@
                             <image>
                                 <name>rhiot/${docker.image.target}</name>
                                 <build>
-                                    <from>rhiot/fatjar:0.1.2-SNAPSHOT</from>
+                                    <from>rhiot/fatjar-dockerclient:0.1.4-SNAPSHOT</from>
                                     <tags>
                                         <tag>latest</tag>
                                         <tag>${project.version}</tag>
+                                        <tag>${timestamp}</tag>
                                     </tags>
                                     <assembly>
                                         <basedir>/jars</basedir>
@@ -352,7 +383,7 @@
                     <artifactId>spring-boot-maven-plugin</artifactId>
                     <version>${spring-boot.version}</version>
                     <configuration>
-                        <mainClass>org.apache.camel.spring.boot.FatJarRouter</mainClass>
+                        <mainClass>${fatjar.mainClass}</mainClass>
                     </configuration>
                     <executions>
                         <execution>
@@ -410,6 +441,35 @@
                         </executions>
                     </plugin>
                 </plugins>
+                <pluginManagement>
+                    <plugins>
+                        <plugin>
+                            <groupId>org.jolokia</groupId>
+                            <artifactId>docker-maven-plugin</artifactId>
+                            <executions>
+                                <execution>
+                                    <id>build</id>
+                                    <phase>install</phase>
+                                    <goals>
+                                        <goal>build</goal>
+                                    </goals>
+                                </execution>
+                                <execution>
+                                    <id>push</id>
+                                    <phase>deploy</phase>
+                                    <goals>
+                                        <goal>push</goal>
+                                    </goals>
+                                </execution>
+                            </executions>
+                        </plugin>
+                    </plugins>
+                </pluginManagement>
+            </build>
+        </profile>
+        <profile>
+            <id>docker</id>
+            <build>
                 <pluginManagement>
                     <plugins>
                         <plugin>

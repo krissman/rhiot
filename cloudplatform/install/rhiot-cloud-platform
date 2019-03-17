@@ -1,0 +1,257 @@
+#  Licensed to the Rhiot under one or more
+#  contributor license agreements.  See the NOTICE file distributed with
+#  this work for additional information regarding copyright ownership.
+#  The licenses this file to You under the Apache License, Version 2.0
+#  (the "License"); you may not use this file except in compliance with
+#  the License.  You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+#!/usr/bin/env bash
+
+### Common function
+
+exe() {
+	echo "EXEC : $@" >> $PAAS_LOG
+	$@  >> $PAAS_LOG 2>&1
+	# check docker cmd and ignore "rm" failed
+	if [ $? -ne 0 ] && [ $2 != "rm" ] ; then
+        log_error "Command 'docker $@' failed."
+        log_info "Please check $PAAS_LOG"
+        exit -1
+  fi
+}
+
+output_log() {
+	tee -a $PAAS_LOG
+}
+
+log() {
+	echo "$@" | tee -a $PAAS_LOG
+}
+
+log_cmd() {
+	log "CMD  : $@"
+}
+
+log_info() {
+	log "INFO : $@"
+}
+
+log_error() {
+	log "ERROR: $@"
+}
+
+log_debug() {
+    echo "$@" >> $PAAS_LOG
+}
+
+### General configuration
+
+if [ -z "${RHIOT_VERSION}" ]; then # Remove after 0.1.5 release
+  BOOTSTRAP_RHIOT_VERSION=0.1.5-SNAPSHOT
+  else
+  BOOTSTRAP_RHIOT_VERSION=$RHIOT_VERSION
+fi
+
+if [ -z "${RHIOT_VERSION}" ]; then # Remove after 0.1.5 release
+    SINGLE_PAAS_RHIOT_VERSION=0.1.5-SNAPSHOT
+else
+    SINGLE_PAAS_RHIOT_VERSION=$RHIOT_VERSION
+fi
+
+if [ -z "${RHIOT_VERSION}" ]; then
+  RHIOT_VERSION=0.1.4
+fi
+
+if [ -z "${RHIOT_HOME}" ]; then
+  RHIOT_HOME="${HOME}/.rhiot"
+fi
+
+if [ -z "${RHIOT_DOCKER_MACHINE_ENV}" ]; then
+  RHIOT_DOCKER_MACHINE_ENV="default"
+fi
+
+if [ -z "${CONTAINERS_LOG_LEVEL}" ]; then
+  CONTAINERS_LOG_LEVEL="INFO"
+fi
+
+if [ -z "${CONTAINERS_NUMBER}" ]; then
+  MEMTOTAL=`free | grep Mem | awk '{ print $2 }'`
+  CONTAINERS_NUMBER=`expr $MEMTOTAL / 1024 / 1024 + 1`
+fi
+
+PAAS_LOG=$RHIOT_HOME/rcp.log
+REQUIRED_DOCKER_VERSION=1.10.3
+
+
+if [ ! -d ${RHIOT_HOME} ]; then
+	mkdir -p ${RHIOT_HOME}
+	log_info "Creating Rhiot home directory at ${RHIOT_HOME} ..."
+fi
+
+log_info "Starting Rhiot Cloud Platform"
+
+### Docker boot init
+
+case "$OSTYPE" in 
+
+	linux-gnu)
+      if ! type "docker" > /dev/null 2>&1 ; then
+        log_info "Docker not found - installing..."
+        curl -sSL https://get.docker.com/ | sh
+      else
+        DOCKER_VERSION=`docker version --format '{{.Server.Version}}'`
+        if [ "$DOCKER_VERSION" \< "$REQUIRED_DOCKER_VERSION" ]; then
+          log_info "Docker ${REQUIRED_DOCKER_VERSION} is required to run Rhiot. Version ${DOCKER_VERSION} found - upgrading..."
+          curl -sSL https://get.docker.com/ | sh
+        fi
+      fi
+  ;;
+  
+	darwin*)
+      if ! type "docker-machine" > /dev/null 2>&1 ; then
+        log_error "Please install docker for MacOS X"
+        exit 1
+      fi
+					
+      docker-machine env $RHIOT_DOCKER_MACHINE_ENV >> $PAAS_LOG 2>&1
+      if [ $? -ne 0 ]; then
+        log_info "docker-machine start $RHIOT_DOCKER_MACHINE_ENV"
+        docker-machine start $RHIOT_DOCKER_MACHINE_ENV >> $PAAS_LOG 2>&1
+      fi
+      eval $(docker-machine env $RHIOT_DOCKER_MACHINE_ENV)
+  ;;
+esac
+
+
+### PaaS runtime configuration
+
+# Exporting host environment variables
+
+ENV="-e "`env | grep -v ' ' | sed ':a;N;$!ba;s/\n/ -e /g'`
+
+# Calculating containers numbers
+
+exe docker pull rhiot/paas-bootstrap:${BOOTSTRAP_RHIOT_VERSION}
+CONTAINERS_NUMBER=`docker run ${ENV} rhiot/paas-bootstrap:${BOOTSTRAP_RHIOT_VERSION}`
+
+### Cleaning existing PaaS state
+
+if [ $(docker ps | wc -l) -gt 1 ]; then
+	log_info "Stop previous container"
+	exe docker stop $(docker ps -q)
+fi
+
+log_info "Removing old containers..."
+exe docker rm -f mongodb keycloak AMQP_SERVICE_HOST paas-single paas-adapters paas-services spark_master spark_worker
+
+### Starting OpenShift
+
+if [ $(docker ps -a | grep openshift-server | wc -l) -eq 0 ]; then
+    exe docker run -d --name openshift-server \
+        --privileged --pid=host --net=host \
+        -v /:/rootfs:ro -v /var/run:/var/run:rw -v /sys:/sys -v /var/lib/docker:/var/lib/docker:rw \
+        -v /var/lib/origin/openshift.local.volumes:/var/lib/origin/openshift.local.volumes \
+        openshift/origin start
+else
+    exe docker start openshift-server
+fi
+
+### MongoDB
+
+log_info "MongoDB"
+if [ $(docker ps -a | grep mongodb_data | wc -l) -eq 0 ]; then
+    log_info "MongoDB data volume doesn't exist. Creating..."
+    exe docker run -v /data/db --name mongodb_data busybox true
+fi
+exe docker run -d --volumes-from mongodb_data --name mongodb -p 27017:27017 mongo
+log_info "MongoDB started"
+
+### KeyCloak
+
+KEYCLOAK_VERSION=1.9.2.Final
+exe docker run -d --name keycloak -p 8082:8080 --link mongodb:mongo \
+  -e KEYCLOAK_USER=${ADMIN_USERNAME} -e KEYCLOAK_PASSWORD=${ADMIN_PASSWORD} \
+  -e JAVA_OPTS="-Djava.net.preferIPv4Stack=true" \
+  jboss/keycloak-mongo:${KEYCLOAK_VERSION}
+
+### Initial auto-scaling
+
+if [ $CONTAINERS_NUMBER -gt 2 ]; then
+
+    ### IoT Connector
+
+    log_info "ActiveMQ"
+    exe docker pull rhiot/activemq:${RHIOT_VERSION}
+    exe docker run -d --name AMQP_SERVICE_HOST \
+      -e spring_activemq_broker_enabled=true -e spring_activemq_broker_amqpEnabled=true -e spring_activemq_broker_websocketEnabled=true \
+      -p 5672:5672 -p 9090:9090 \
+      -t rhiot/activemq:${RHIOT_VERSION}
+    log_info "ActiveMQ started"
+
+    ### Protocol adapters
+
+    log_info "Starting protocol adapters..."
+    exe docker pull rhiot/paas-adapters:${RHIOT_VERSION}
+    exe docker run -d --name paas-adapters --net=host -t rhiot/paas-adapters:${RHIOT_VERSION}
+    log_info "Protocol adapters started."
+
+    ### Services
+
+    log_info "Starting services..."
+    exe docker pull rhiot/paas-services:${RHIOT_VERSION}
+    exe docker run -d --name paas-services \
+      --privileged -v /var/run/docker.sock:/run/docker.sock -v /tmp/openalpr-workdir:/tmp/openalpr-workdir \
+      -v /var/rhiot/pass/binary:/tmp/rhiot/binary \
+      -e logging.level.root=${CONTAINERS_LOG_LEVEL} \
+      --link AMQP_SERVICE_HOST:AMQP_SERVICE_HOST -e AMQP_SERVICE_HOST=AMQP_SERVICE_HOST \
+      --link mongodb:mongodb \
+      -t rhiot/paas-services:${RHIOT_VERSION}
+    log_info "Services started."
+
+    ### Spark standalone cluster
+
+    if [ "${SPARK_ENABLED}" != 'false' ]; then
+
+        log_info "Spark"
+        exe docker pull rhiot/spark-standalone:${RHIOT_VERSION}
+        exe docker run -d --name spark_master -p 8081:8080 -P -t rhiot/spark-standalone:${RHIOT_VERSION} /start-master.sh "$@"
+        sleep 5
+        SPARK_MASTER_SERVICE_HOST=`docker inspect spark_master | grep IPAddress\": | cut -d '"' -f 4 | uniq`
+        log_info "Spark master started"
+
+        exe docker run -d --name spark_worker \
+          --link spark_master:spark_master --link AMQP_SERVICE_HOST:AMQP_SERVICE_HOST -e SPARK_MASTER_SERVICE_HOST=${SPARK_MASTER_SERVICE_HOST} \
+          -v /tmp/jobs:/tmp/jobs -P \
+          -t rhiot/spark-standalone:${RHIOT_VERSION} /start-worker.sh
+        log_info "Spark worker started"
+
+    fi
+
+else
+
+    ### Single node Cloud PaaS
+
+    log_info "Starting single node Cloud PaaS..."
+    exe docker pull rhiot/paas-single:${SINGLE_PAAS_RHIOT_VERSION}
+    exe docker run -d --name paas-single --net=host -t \
+      --privileged -v /var/run/docker.sock:/run/docker.sock -v /tmp/openalpr-workdir:/tmp/openalpr-workdir \
+      -e logging.level.root=${CONTAINERS_LOG_LEVEL} rhiot/paas-single:${SINGLE_PAAS_RHIOT_VERSION}
+    log_info "Single node Cloud PaaS started."
+
+fi
+
+### Custom scripts
+
+if [ -e ${RHIOT_HOME}/paas.config ]; then
+    exe . ${RHIOT_HOME}/paas.config
+else
+    log_debug "No ${RHIOT_HOME}/paas.config file. Skipping loading of a custom script."
+fi

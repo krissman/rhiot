@@ -1,0 +1,97 @@
+#  Licensed to the Rhiot under one or more
+#  contributor license agreements.  See the NOTICE file distributed with
+#  this work for additional information regarding copyright ownership.
+#  The licenses this file to You under the Apache License, Version 2.0
+#  (the "License"); you may not use this file except in compliance with
+#  the License.  You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+#!/usr/bin/env bash
+
+### Rhiot setup
+
+if [ -z "${RHIOT_VERSION}" ]; then
+  RHIOT_VERSION=0.1.4
+fi
+
+if [ -z "${RHIOT_HOME}" ]; then
+  RHIOT_HOME="${HOME}/.rhiot"
+fi
+
+if [ -z "${RHIOT_DOCKER_MACHINE_ENV}" ]; then
+  RHIOT_DOCKER_MACHINE_ENV="default"
+fi
+
+if [ -z "${SHELL_LOG_LEVEL}" ]; then
+  SHELL_LOG_LEVEL="INFO"
+fi
+
+if [ ! -d ${RHIOT_HOME} ]; then
+	mkdir -p ${RHIOT_HOME}
+	echo "INFO : use RHIOT_HOME=${RHIOT_HOME}"
+	echo "INFO : create RHIOT_HOME=${RHIOT_HOME}"
+fi
+
+RHIOT_DOWNLOADS="${RHIOT_HOME}/downloads"
+
+### Docker boot init
+
+case "$OSTYPE" in 
+
+	linux-gnu)
+      if ! type "docker" > /dev/null 2>&1 ; then
+        echo "INFO : Docker not found - installing..."
+        wget -qO- https://get.docker.com/ | sh
+      else
+        REQUIRED_DOCKER_VERSION=1.8.2
+        DOCKER_VERSION=`docker version --format '{{.Server.Version}}'`
+        if [ "$DOCKER_VERSION" \< "$REQUIRED_DOCKER_VERSION" ]; then
+          echo "INFO : Docker ${REQUIRED_DOCKER_VERSION} is required to run Rhiot. Version ${DOCKER_VERSION} found - upgrading..."
+          wget -qO- https://get.docker.com/ | sh
+        fi
+      fi
+  ;;
+  
+	darwin*)
+      if ! type "docker-machine" > /dev/null 2>&1; then
+        echo "ERROR : Please install docker for MacOS X"
+        exit 1
+      fi
+					
+      docker-machine env $RHIOT_DOCKER_MACHINE_ENV > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "INFO :  docker-machine start $RHIOT_DOCKER_MACHINE_ENV"
+        docker-machine start $RHIOT_DOCKER_MACHINE_ENV > /dev/null 2>&1
+      fi
+      eval $(docker-machine env $RHIOT_DOCKER_MACHINE_ENV)
+  ;;
+esac
+
+### Shell startup
+
+SHELL_CONTAINER_STARTED=`docker ps | grep rhiot-shell`
+
+if [ -z "${SHELL_CONTAINER_STARTED}" ]; then
+    echo 'Pulling and starting shell server image...'
+    docker pull rhiot/shell:${RHIOT_VERSION} >> ${RHIOT_HOME}/rhiot-cmd.log 2>&1
+    docker rm rhiot-shell >> ${RHIOT_HOME}/rhiot-cmd.log 2>&1
+    docker run -d --name rhiot-shell --privileged=true --net=host -p 2000:2000 \
+    -v /dev:/root/hostdev -e devices_directory=/root/hostdev \
+    -v ${RHIOT_DOWNLOADS}:/root/.rhiot/downloads -v ~/.m2/repository:/var/maven/repository -v ${RHIOT_HOME}/maven/repository:/root/.m2/repository \
+    -e logging.level.root=${SHELL_LOG_LEVEL} \
+    -it rhiot/shell:${RHIOT_VERSION}  >> ${RHIOT_HOME}/rhiot-cmd.log 2>&1
+    sleep 10 # Give SSHD time to start
+    echo 'Shell server started.'
+    echo
+fi
+
+### Command execution
+
+docker run -v /dev:/root/hostdev -e devices_directory=/root/hostdev -v ~/.m2/repository:/var/maven/repository -v ${RHIOT_DOWNLOADS}:/root/.rhiot/downloads -v ${RHIOT_HOME}/maven/repository:/root/.m2/repository --privileged=true --net=host -it rhiot/cmd:${RHIOT_VERSION} "$@"
